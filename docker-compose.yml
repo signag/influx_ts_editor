@@ -1,0 +1,15 @@
+services:
+  influx-editor:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      # Persist connection settings across container restarts
+      - influx-editor-data:/data
+    environment:
+      SETTINGS_FILE: /data/settings.json
+      LOG_LEVEL: INFO
+    restart: unless-stopped
+
+volumes:
+  influx-editor-data:

@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfluxDB Editor</title>
+    <!-- W3.CSS -->
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+          integrity="sha512-Avb2QiuDEEvB4bZJYdft2mNjVShBftLdPG8FJ0V7irTLQ8Uo0qcPxh4Plq7G5tGm0rU+1SPhVotteLpBERwOA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body { padding-top: 52px; background-color: #f5f5f5; }
+
+        /* Status indicator dot */
+        .status-dot {
+            display: inline-block;
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        .dot-connected    { background: #4caf50; }
+        .dot-disconnected { background: #9e9e9e; }
+        .dot-error        { background: #f44336; }
+
+        /* Tag filter row */
+        .tag-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .tag-row select { flex: 1; }
+
+        /* Spinning loader */
+        .spinner {
+            display: inline-block;
+            width: 16px; height: 16px;
+            border: 3px solid #ddd;
+            border-top-color: #2196F3;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 4px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Table scroll wrapper */
+        #tableWrapper {
+            max-height: 360px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+        #dataTable thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        /* Highlight modified rows */
+        tr.row-modified { background-color: #fff8e1 !important; }
+
+        /* Compact number input in table */
+        .mod-input {
+            width: 120px;
+            padding: 2px 6px;
+            font-size: 0.9em;
+        }
+
+        /* Toast notification */
+        #toast {
+            position: fixed;
+            bottom: 24px; right: 24px;
+            z-index: 9999;
+            min-width: 260px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .section-card {
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header-bar { cursor: default; }
+    </style>
+</head>
+<body>
+
+<!-- =====================================================================
+     TOP NAVIGATION BAR
+===================================================================== -->
+<div class="w3-top w3-bar w3-dark-grey" style="z-index:100;">
+    <span class="w3-bar-item" style="font-size:1.2em; font-weight:bold; padding: 14px 16px;">
+        <i class="fa fa-database"></i>&nbsp;InfluxDB Editor
+    </span>
+    <div class="w3-bar-item w3-right" id="statusBar" style="padding: 14px 16px;">
+        <span class="status-dot dot-disconnected" id="statusDot"></span>
+        <span id="statusText" class="w3-text-light-grey">Disconnected</span>
+    </div>
+</div>
+
+<!-- =====================================================================
+     MAIN CONTENT
+===================================================================== -->
+<div class="w3-container w3-padding" style="max-width:1400px; margin:0 auto;">
+
+    <!-- =================================================================
+         PANEL 1 – CONNECTION SETTINGS
+    ================================================================= -->
+    <div class="w3-card section-card w3-white w3-margin-bottom">
+        <div class="w3-container w3-blue header-bar" onclick="togglePanel('settingsBody','settingsArrow')">
+            <h4 style="margin:10px 0;">
+                <i class="fa fa-plug"></i>&nbsp;Connection Settings
+                <span class="w3-right" id="settingsArrow">&#9660;</span>
+            </h4>
+        </div>
+        <div id="settingsBody" class="w3-container w3-padding">
+            <div class="w3-row-padding">
+                <div class="w3-col m4 s12">
+                    <label><b>Server URL</b></label>
+                    <input id="inputUrl" class="w3-input w3-border w3-margin-bottom"
+                           type="text" placeholder="http://localhost:8086"
+                           autocomplete="off">
+                </div>
+                <div class="w3-col m4 s12">
+                    <label><b>Organization</b></label>
+                    <input id="inputOrg" class="w3-input w3-border w3-margin-bottom"
+                           type="text" placeholder="my-org"
+                           autocomplete="off">
+                </div>
+                <div class="w3-col m4 s12">
+                    <label><b>API Token</b></label>
+                    <input id="inputToken" class="w3-input w3-border w3-margin-bottom"
+                           type="password" placeholder="your-api-token"
+                           autocomplete="current-password">
+                </div>
+            </div>
+            <div class="w3-margin-bottom">
+                <label>
+                    <input type="checkbox" id="saveToken" class="w3-check">
+                    &nbsp;Remember API Token for next session
+                </label>
+            </div>
+            <div>
+                <button class="w3-button w3-blue w3-ripple" onclick="doConnect()">
+                    <i class="fa fa-plug"></i>&nbsp;Connect
+                </button>
+                <button class="w3-button w3-grey w3-ripple w3-margin-left" onclick="doDisconnect()">
+                    <i class="fa fa-times"></i>&nbsp;Disconnect
+                </button>
+                <span id="connectMsg" class="w3-margin-left"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- =================================================================
+         PANEL 2 – TIME SERIES SELECTION
+    ================================================================= -->
+    <div class="w3-card section-card w3-white w3-margin-bottom">
+        <div class="w3-container w3-blue header-bar" onclick="togglePanel('queryBody','queryArrow')">
+            <h4 style="margin:10px 0;">
+                <i class="fa fa-filter"></i>&nbsp;Time Series Selection
+                <span class="w3-right" id="queryArrow">&#9660;</span>
+            </h4>
+        </div>
+        <div id="queryBody" class="w3-container w3-padding">
+
+            <!-- Row 1: Bucket / Measurement / Field -->
+            <div class="w3-row-padding">
+                <div class="w3-col m4 s12">
+                    <label><b>Bucket</b></label>
+                    <select id="selBucket" class="w3-select w3-border w3-margin-bottom"
+                            onchange="onBucketChange()">
+                        <option value="">— Select Bucket —</option>
+                    </select>
+                </div>
+                <div class="w3-col m4 s12">
+                    <label><b>Measurement</b></label>
+                    <select id="selMeasurement" class="w3-select w3-border w3-margin-bottom"
+                            onchange="onMeasurementChange()">
+                        <option value="">— Select Measurement —</option>
+                    </select>
+                </div>
+                <div class="w3-col m4 s12">
+                    <label><b>Field Key</b></label>
+                    <select id="selField" class="w3-select w3-border w3-margin-bottom">
+                        <option value="">— Select Field —</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Row 2: Tag filters -->
+            <div class="w3-margin-bottom">
+                <label><b>Tag Filters</b></label>
+                <div id="tagFilters"></div>
+                <button class="w3-button w3-small w3-green w3-ripple w3-margin-top"
+                        onclick="addTagFilter()">
+                    <i class="fa fa-plus"></i>&nbsp;Add Tag Filter
+                </button>
+            </div>
+
+            <!-- Row 3: Time range -->
+            <div class="w3-row-padding">
+                <div class="w3-col m3 s12">
+                    <label><b>Start Time</b></label>
+                    <input type="datetime-local" id="inputStart"
+                           class="w3-input w3-border w3-margin-bottom">
+                </div>
+                <div class="w3-col m3 s12">
+                    <label><b>Stop Time</b></label>
+                    <input type="datetime-local" id="inputStop"
+                           class="w3-input w3-border w3-margin-bottom">
+                </div>
+                <div class="w3-col m6 s12">
+                    <label><b>Quick Range</b></label>
+                    <div class="w3-margin-bottom">
+                        <button class="w3-button w3-small w3-border w3-ripple" onclick="setQuickRange(1,'h')">1 h</button>
+                        <button class="w3-button w3-small w3-border w3-ripple" onclick="setQuickRange(6,'h')">6 h</button>
+                        <button class="w3-button w3-small w3-border w3-ripple" onclick="setQuickRange(24,'h')">24 h</button>
+                        <button class="w3-button w3-small w3-border w3-ripple" onclick="setQuickRange(7,'d')">7 d</button>
+                        <button class="w3-button w3-small w3-border w3-ripple" onclick="setQuickRange(30,'d')">30 d</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 4: Query button -->
+            <div>
+                <button class="w3-button w3-blue w3-ripple" onclick="doQuery()">
+                    <i class="fa fa-search"></i>&nbsp;Query
+                </button>
+                <span id="queryMsg" class="w3-margin-left"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- =================================================================
+         PANEL 3 – RESULTS (chart + table)
+    ================================================================= -->
+    <div id="resultsPanel" class="w3-card section-card w3-white w3-margin-bottom" style="display:none;">
+        <div class="w3-container w3-blue">
+            <h4 style="margin:10px 0;">
+                <i class="fa fa-chart-line"></i>&nbsp;Results
+                <span id="recCountBadge" class="w3-badge w3-white w3-text-blue w3-margin-left"></span>
+            </h4>
+        </div>
+        <div class="w3-container w3-padding">
+
+            <!-- Chart -->
+            <div style="position:relative; height:350px; margin-bottom:16px;">
+                <canvas id="myChart"></canvas>
+            </div>
+
+            <!-- Table -->
+            <div id="tableWrapper">
+                <table class="w3-table w3-striped w3-bordered w3-small" id="dataTable">
+                    <thead class="w3-dark-grey">
+                        <tr>
+                            <th style="width:46px;">#</th>
+                            <th>Timestamp (UTC)</th>
+                            <th>Original Value</th>
+                            <th>Modified Value</th>
+                            <th style="width:60px; text-align:center;">⚑</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div id="paginationDiv" class="w3-center w3-margin-top"></div>
+
+            <!-- Action buttons -->
+            <div class="w3-margin-top w3-padding-bottom" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <button id="commitBtn" class="w3-button w3-green w3-ripple"
+                        onclick="doCommit()" disabled>
+                    <i class="fa fa-check"></i>&nbsp;Commit Changes
+                </button>
+                <button class="w3-button w3-orange w3-ripple" onclick="clearModifications()">
+                    <i class="fa fa-rotate-left"></i>&nbsp;Clear Modifications
+                </button>
+                <span id="modCount" class="w3-text-grey w3-small"></span>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /main container -->
+
+<!-- Toast notification -->
+<div id="toast" class="w3-panel w3-animate-bottom" style="display:none; position:fixed; bottom:24px; right:24px; z-index:9999; min-width:260px; border-radius:4px;">
+    <span id="toastMsg"></span>
+</div>
+
+<!-- =======================================================================
+     JAVASCRIPT
+======================================================================= -->
+<script>
+"use strict";
+
+// -------------------------------------------------------------------------
+// State
+// -------------------------------------------------------------------------
+let _results      = [];       // [{timestamp, value}] from last query
+let _modified     = {};       // {timestamp: newValue}
+let _currentQuery = null;     // last query parameters
+let _chart        = null;     // Chart.js instance
+let _page         = 1;
+const PAGE_SIZE   = 50;
+let _tagCount     = 0;        // monotonic ID for tag rows
+
+// -------------------------------------------------------------------------
+// Init
+// -------------------------------------------------------------------------
+document.addEventListener("DOMContentLoaded", async () => {
+    setQuickRange(1, "h");
+    await loadSettings();
+    await refreshStatus();
+});
+
+// -------------------------------------------------------------------------
+// Settings
+// -------------------------------------------------------------------------
+async function loadSettings() {
+    try {
+        const data = await apiGet("/api/settings");
+        if (data.url)   document.getElementById("inputUrl").value   = data.url;
+        if (data.org)   document.getElementById("inputOrg").value   = data.org;
+        if (data.token) document.getElementById("inputToken").value = data.token;
+        document.getElementById("saveToken").checked = !!data.save_token;
+    } catch (_) { /* ignore */ }
+}
+
+async function persistSettings() {
+    try {
+        await apiPost("/api/settings", {
+            url:        getElementById("inputUrl").value.trim(),
+            org:        getElementById("inputOrg").value.trim(),
+            token:      getElementById("inputToken").value.trim(),
+            save_token: document.getElementById("saveToken").checked
+        });
+    } catch (_) { /* ignore */ }
+}
+
+// -------------------------------------------------------------------------
+// Connection
+// -------------------------------------------------------------------------
+async function doConnect() {
+    const url   = val("inputUrl");
+    const org   = val("inputOrg");
+    const token = val("inputToken");
+
+    if (!url || !org || !token) {
+        setMsg("connectMsg", "error", "Please fill in all three fields.");
+        return;
+    }
+    setMsg("connectMsg", "loading", "Connecting…");
+
+    try {
+        const data = await apiPost("/api/connect", { url, org, token });
+        if (data.success) {
+            setMsg("connectMsg", "ok", "Connected!");
+            setStatusBar(true, url, org);
+            await persistSettings();
+            await loadBuckets();
+            toast("Connected to InfluxDB", "green");
+        } else {
+            setMsg("connectMsg", "error", data.error || "Connection failed");
+            setStatusBar(false);
+        }
+    } catch (e) {
+        setMsg("connectMsg", "error", e.message);
+        setStatusBar(false);
+    }
+}
+
+async function doDisconnect() {
+    try { await apiPost("/api/disconnect", {}); } catch (_) {}
+    setStatusBar(false);
+    setMsg("connectMsg", "grey", "Disconnected.");
+    resetQueryUI();
+    document.getElementById("resultsPanel").style.display = "none";
+    toast("Disconnected", "grey");
+}
+
+async function refreshStatus() {
+    try {
+        const data = await apiGet("/api/status");
+        if (data.connected) {
+            setStatusBar(true, data.url, data.org);
+            await loadBuckets();
+        }
+    } catch (_) {}
+}
+
+function setStatusBar(connected, url, org) {
+    const dot  = document.getElementById("statusDot");
+    const text = document.getElementById("statusText");
+    dot.className = "status-dot " + (connected ? "dot-connected" : "dot-disconnected");
+    text.textContent = connected
+        ? "Connected: " + url + "  |  " + org
+        : "Disconnected";
+}
+
+// -------------------------------------------------------------------------
+// Bucket / Measurement / Field cascading dropdowns
+// -------------------------------------------------------------------------
+async function loadBuckets() {
+    try {
+        const data = await apiGet("/api/buckets");
+        if (data.error) return;
+        const sel = document.getElementById("selBucket");
+        sel.innerHTML = '<option value="">— Select Bucket —</option>';
+        (data.buckets || []).forEach(b => sel.appendChild(opt(b)));
+    } catch (_) {}
+}
+
+async function onBucketChange() {
+    const bucket = val("selBucket");
+    resetSel("selMeasurement", "— Select Measurement —");
+    resetSel("selField",       "— Select Field —");
+    clearTagFilters();
+    if (!bucket) return;
+
+    try {
+        const data = await apiGet("/api/measurements?bucket=" + enc(bucket));
+        if (data.error) { toast(data.error, "red"); return; }
+        const sel = document.getElementById("selMeasurement");
+        (data.measurements || []).forEach(m => sel.appendChild(opt(m)));
+    } catch (_) { toast("Failed to load measurements", "red"); }
+}
+
+async function onMeasurementChange() {
+    const bucket      = val("selBucket");
+    const measurement = val("selMeasurement");
+    resetSel("selField", "— Select Field —");
+    clearTagFilters();
+    if (!bucket || !measurement) return;
+
+    try {
+        const data = await apiGet(
+            "/api/field-keys?bucket=" + enc(bucket) + "&measurement=" + enc(measurement)
+        );
+        if (!data.error) {
+            const sel = document.getElementById("selField");
+            (data.field_keys || []).forEach(f => sel.appendChild(opt(f)));
+        }
+    } catch (_) { toast("Failed to load field keys", "red"); }
+}
+
+// -------------------------------------------------------------------------
+// Tag filters
+// -------------------------------------------------------------------------
+function clearTagFilters() {
+    document.getElementById("tagFilters").innerHTML = "";
+    _tagCount = 0;
+}
+
+async function addTagFilter() {
+    const bucket      = val("selBucket");
+    const measurement = val("selMeasurement");
+    const rowId       = "tagRow" + _tagCount++;
+
+    const div = document.createElement("div");
+    div.className = "tag-row";
+    div.id        = rowId;
+    div.innerHTML =
+        '<select class="w3-select w3-border tag-key-sel" style="flex:1;" onchange="onTagKeyChange(this)">'
+      +   '<option value="">— Tag Key —</option>'
+      + '</select>'
+      + '<span style="padding:0 6px; color:#555;">=</span>'
+      + '<select class="w3-select w3-border tag-val-sel" style="flex:1;" disabled>'
+      +   '<option value="">— Tag Value —</option>'
+      + '</select>'
+      + '<button class="w3-button w3-red w3-small w3-ripple" onclick="removeTagFilter(this)">'
+      +   '<i class="fa fa-minus"></i>'
+      + '</button>';
+    document.getElementById("tagFilters").appendChild(div);
+
+    if (bucket && measurement) {
+        try {
+            const data = await apiGet(
+                "/api/tag-keys?bucket=" + enc(bucket) + "&measurement=" + enc(measurement)
+            );
+            if (!data.error) {
+                const keySelect = div.querySelector(".tag-key-sel");
+                (data.tag_keys || []).forEach(k => keySelect.appendChild(opt(k)));
+            }
+        } catch (_) {}
+    }
+}
+
+function removeTagFilter(btn) {
+    btn.closest(".tag-row").remove();
+}
+
+async function onTagKeyChange(keySelect) {
+    const bucket      = val("selBucket");
+    const measurement = val("selMeasurement");
+    const tagKey      = keySelect.value;
+    const row         = keySelect.closest(".tag-row");
+    const valSelect   = row.querySelector(".tag-val-sel");
+
+    valSelect.innerHTML = '<option value="">— Tag Value —</option>';
+    valSelect.disabled  = true;
+    if (!tagKey || !bucket || !measurement) return;
+
+    try {
+        const data = await apiGet(
+            "/api/tag-values?bucket=" + enc(bucket)
+          + "&measurement=" + enc(measurement)
+          + "&tag_key=" + enc(tagKey)
+        );
+        if (!data.error) {
+            (data.tag_values || []).forEach(v => valSelect.appendChild(opt(v)));
+            valSelect.disabled = false;
+        }
+    } catch (_) {}
+}
+
+// -------------------------------------------------------------------------
+// Time range helpers
+// -------------------------------------------------------------------------
+function setQuickRange(amount, unit) {
+    const now   = new Date();
+    const start = new Date(now);
+    if      (unit === "h") start.setHours  (start.getHours()   - amount);
+    else if (unit === "d") start.setDate   (start.getDate()    - amount);
+    document.getElementById("inputStop").value  = toDTLocal(now);
+    document.getElementById("inputStart").value = toDTLocal(start);
+}
+
+function toDTLocal(d) {
+    // Returns datetime-local string in local timezone
+    const pad = n => String(n).padStart(2, "0");
+    return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate())
+         + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+
+function toISO(dtLocalStr) {
+    if (!dtLocalStr) return null;
+    return new Date(dtLocalStr).toISOString();
+}
+
+// -------------------------------------------------------------------------
+// Query
+// -------------------------------------------------------------------------
+async function doQuery() {
+    const bucket      = val("selBucket");
+    const measurement = val("selMeasurement");
+    const field       = val("selField");
+    const start       = toISO(val("inputStart"));
+    const stop        = toISO(val("inputStop"));
+
+    if (!bucket || !measurement || !field) {
+        setMsg("queryMsg", "error", "Please select bucket, measurement and field.");
+        return;
+    }
+    if (!start || !stop) {
+        setMsg("queryMsg", "error", "Please specify start and stop times.");
+        return;
+    }
+
+    const tags = collectTags();
+    _currentQuery = { bucket, measurement, tags, field, start, stop };
+    _modified     = {};
+
+    setMsg("queryMsg", "loading", "Querying…");
+    try {
+        const data = await apiPost("/api/query", _currentQuery);
+        if (data.error) {
+            setMsg("queryMsg", "error", data.error);
+            return;
+        }
+        _results = data.records || [];
+        setMsg("queryMsg", "ok", _results.length + " record(s) found.");
+        document.getElementById("recCountBadge").textContent = _results.length;
+
+        _page = 1;
+        renderChart();
+        renderTable(_page);
+        updateCommitBtn();
+        document.getElementById("resultsPanel").style.display = "";
+    } catch (e) {
+        setMsg("queryMsg", "error", "Query failed: " + e.message);
+    }
+}
+
+function collectTags() {
+    const tags = [];
+    document.querySelectorAll(".tag-row").forEach(row => {
+        const k = row.querySelector(".tag-key-sel").value;
+        const v = row.querySelector(".tag-val-sel").value;
+        if (k && v) tags.push({ key: k, value: v });
+    });
+    return tags;
+}
+
+// -------------------------------------------------------------------------
+// Chart
+// -------------------------------------------------------------------------
+function renderChart() {
+    const labels   = _results.map(r => {
+        // Show timestamp as locale string, strip timezone indicator for brevity
+        const d = new Date(r.timestamp);
+        return d.toLocaleString(undefined, { timeZone: "UTC",
+            year:"numeric", month:"2-digit", day:"2-digit",
+            hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false });
+    });
+    const origData = _results.map(r => r.value);
+    const modData  = _results.map(r =>
+        Object.prototype.hasOwnProperty.call(_modified, r.timestamp)
+            ? _modified[r.timestamp] : r.value
+    );
+    const hasMods  = Object.keys(_modified).length > 0;
+    const sparse   = _results.length > 300;
+
+    if (_chart) { _chart.destroy(); _chart = null; }
+
+    const ctx = document.getElementById("myChart").getContext("2d");
+    _chart = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: "Original",
+                    data: origData,
+                    borderColor: "rgba(33, 150, 243, 1)",
+                    backgroundColor: "rgba(33, 150, 243, 0.08)",
+                    borderWidth: 2,
+                    pointRadius: sparse ? 0 : 3,
+                    tension: 0.1,
+                    order: 2
+                },
+                {
+                    label: "Modified",
+                    data: modData,
+                    borderColor: "rgba(255, 152, 0, 1)",
+                    backgroundColor: "rgba(255, 152, 0, 0.08)",
+                    borderWidth: 2,
+                    borderDash: [6, 4],
+                    pointRadius: sparse ? 0 : 3,
+                    tension: 0.1,
+                    hidden: !hasMods,
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+                legend: { display: true },
+                tooltip: { callbacks: {
+                    title: items => items[0].label
+                }}
+            },
+            scales: {
+                x: { ticks: { maxTicksLimit: 12, maxRotation: 40 } },
+                y: { title: {
+                    display: true,
+                    text: (_currentQuery && _currentQuery.field) || "Value"
+                }}
+            }
+        }
+    });
+}
+
+function refreshChartMods() {
+    if (!_chart || !_results.length) return;
+    const modData = _results.map(r =>
+        Object.prototype.hasOwnProperty.call(_modified, r.timestamp)
+            ? _modified[r.timestamp] : r.value
+    );
+    const hasMods = Object.keys(_modified).length > 0;
+    _chart.data.datasets[1].data   = modData;
+    _chart.data.datasets[1].hidden = !hasMods;
+    _chart.update("none");
+}
+
+// -------------------------------------------------------------------------
+// Table
+// -------------------------------------------------------------------------
+function renderTable(page) {
+    _page = page;
+    const start  = (page - 1) * PAGE_SIZE;
+    const end    = Math.min(start + PAGE_SIZE, _results.length);
+    const tbody  = document.getElementById("tableBody");
+    tbody.innerHTML = "";
+
+    for (let i = start; i < end; i++) {
+        const r   = _results[i];
+        const ts  = r.timestamp;
+        const mod = Object.prototype.hasOwnProperty.call(_modified, ts);
+        const modVal = mod ? _modified[ts] : "";
+
+        const tr = document.createElement("tr");
+        if (mod) tr.classList.add("row-modified");
+
+        tr.innerHTML =
+            "<td>" + (i + 1) + "</td>"
+          + "<td style='white-space:nowrap;font-family:monospace;'>" + esc(ts) + "</td>"
+          + "<td style='text-align:right;'>" + esc(String(r.value)) + "</td>"
+          + "<td>"
+          +   "<input type='number' step='any' class='w3-input w3-border mod-input'"
+          +   " data-ts='" + esc(ts) + "' data-idx='" + i + "'"
+          +   " value='" + (mod ? esc(String(modVal)) : "") + "'"
+          +   " placeholder='enter new value'"
+          +   " oninput='onModInput(this)'>"
+          + "</td>"
+          + "<td style='text-align:center;'>"
+          +   (mod ? "<span title='Modified' style='color:#f57c00;font-size:1.1em;'>&#9998;</span>" : "")
+          + "</td>";
+        tbody.appendChild(tr);
+    }
+    renderPagination(page);
+}
+
+function renderPagination(page) {
+    const total = Math.ceil(_results.length / PAGE_SIZE);
+    const div   = document.getElementById("paginationDiv");
+    if (total <= 1) { div.innerHTML = ""; return; }
+
+    const lo = Math.max(1,     page - 2);
+    const hi = Math.min(total, page + 2);
+    let html = '<div class="w3-bar">';
+    if (page > 1)    html += `<button class="w3-button w3-bar-item" onclick="renderTable(${page-1})">&#8249;</button>`;
+    for (let p = lo; p <= hi; p++) {
+        if (p === page)
+            html += `<button class="w3-button w3-bar-item w3-blue">${p}</button>`;
+        else
+            html += `<button class="w3-button w3-bar-item" onclick="renderTable(${p})">${p}</button>`;
+    }
+    if (page < total) html += `<button class="w3-button w3-bar-item" onclick="renderTable(${page+1})">&#8250;</button>`;
+    html += '</div>';
+    div.innerHTML = html;
+}
+
+function onModInput(input) {
+    const ts  = input.dataset.ts;
+    const raw = input.value.trim();
+    const tr  = input.closest("tr");
+    const flagCell = tr.querySelector("td:last-child");
+
+    if (raw === "") {
+        delete _modified[ts];
+        tr.classList.remove("row-modified");
+        flagCell.innerHTML = "";
+    } else {
+        const num = parseFloat(raw);
+        if (isNaN(num)) { return; }
+        _modified[ts] = num;
+        tr.classList.add("row-modified");
+        flagCell.innerHTML = "<span title='Modified' style='color:#f57c00;font-size:1.1em;'>&#9998;</span>";
+    }
+    refreshChartMods();
+    updateCommitBtn();
+}
+
+function clearModifications() {
+    _modified = {};
+    if (_results.length > 0) {
+        renderTable(_page);
+        refreshChartMods();
+    }
+    updateCommitBtn();
+}
+
+function updateCommitBtn() {
+    const count = Object.keys(_modified).length;
+    document.getElementById("commitBtn").disabled = count === 0;
+    document.getElementById("modCount").textContent =
+        count > 0 ? count + " modification(s) pending" : "";
+}
+
+// -------------------------------------------------------------------------
+// Commit
+// -------------------------------------------------------------------------
+async function doCommit() {
+    if (!_currentQuery) return;
+    const updates = Object.entries(_modified).map(([timestamp, new_value]) => ({
+        timestamp, new_value
+    }));
+    if (updates.length === 0) return;
+
+    const btn = document.getElementById("commitBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Committing…';
+
+    try {
+        const data = await apiPost("/api/update", {
+            bucket:      _currentQuery.bucket,
+            measurement: _currentQuery.measurement,
+            tags:        _currentQuery.tags,
+            field:       _currentQuery.field,
+            updates
+        });
+        if (data.success) {
+            toast("✓ " + data.updated + " record(s) updated.", "green");
+            // Re-run original query so UI reflects persisted data
+            await doQuery();
+        } else {
+            toast("✗ Commit failed: " + (data.error || "unknown error"), "red");
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-check"></i>&nbsp;Commit Changes';
+        }
+    } catch (e) {
+        toast("✗ " + e.message, "red");
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-check"></i>&nbsp;Commit Changes';
+    }
+}
+
+// -------------------------------------------------------------------------
+// UI helpers
+// -------------------------------------------------------------------------
+function togglePanel(bodyId, arrowId) {
+    const body  = document.getElementById(bodyId);
+    const arrow = document.getElementById(arrowId);
+    if (!body) return;
+    if (body.style.display === "none") {
+        body.style.display  = "";
+        if (arrow) arrow.innerHTML = "&#9660;";
+    } else {
+        body.style.display  = "none";
+        if (arrow) arrow.innerHTML = "&#9654;";
+    }
+}
+
+function setMsg(id, type, text) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const icons = { ok:"fa-check", error:"fa-times-circle", loading:"", grey:"" };
+    const colors = { ok:"w3-text-green", error:"w3-text-red", loading:"", grey:"w3-text-grey" };
+    const icon = (type === "loading")
+        ? '<span class="spinner"></span>'
+        : (icons[type] ? `<i class="fa ${icons[type]}"></i> ` : "");
+    el.innerHTML = `<span class="${colors[type] || ''}">${icon}${esc(text)}</span>`;
+}
+
+let _toastTimer = null;
+function toast(msg, color) {
+    const el  = document.getElementById("toast");
+    const txt = document.getElementById("toastMsg");
+    el.className = "w3-panel w3-animate-bottom w3-" + color;
+    txt.textContent = msg;
+    el.style.display = "block";
+    if (_toastTimer) clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => { el.style.display = "none"; }, 3500);
+}
+
+function resetQueryUI() {
+    resetSel("selBucket",      "— Select Bucket —");
+    resetSel("selMeasurement", "— Select Measurement —");
+    resetSel("selField",       "— Select Field —");
+    clearTagFilters();
+}
+
+// -------------------------------------------------------------------------
+// Small utilities
+// -------------------------------------------------------------------------
+function val(id) {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : "";
+}
+
+function getElementById(id) {
+    return document.getElementById(id);
+}
+
+function enc(s) { return encodeURIComponent(s); }
+
+function esc(s) {
+    if (s === null || s === undefined) return "";
+    return String(s)
+        .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+}
+
+function opt(text) {
+    const o = document.createElement("option");
+    o.value = text;
+    o.textContent = text;
+    return o;
+}
+
+function resetSel(id, placeholder) {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = `<option value="">${placeholder}</option>`;
+}
+
+// -------------------------------------------------------------------------
+// Fetch wrappers
+// -------------------------------------------------------------------------
+async function apiGet(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+}
+
+async function apiPost(url, body) {
+    const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+    });
+    return res.json();
+}
+</script>
+
+</body>
+</html>
