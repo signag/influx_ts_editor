@@ -24,9 +24,9 @@ SETTINGS_FILE = os.environ.get(
     os.path.join(os.path.dirname(__file__), "data", "settings.json"),
 )
 
-LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "ERROR")
 logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    level=getattr(logging, LOG_LEVEL, logging.ERROR),
     format="%(asctime)s %(levelname)s %(name)s – %(message)s",
 )
 logger = logging.getLogger(__name__)
