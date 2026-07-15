@@ -7,9 +7,11 @@ import json
 import logging
 import os
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, g
 from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
+from version import version
+from version_doc import docversion
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -125,6 +127,8 @@ def _save_settings(settings: dict) -> bool:
 
 @app.route("/")
 def index():
+    g.version = version
+    g.docversion = docversion
     return render_template("index.html")
 
 
