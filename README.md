@@ -1,16 +1,12 @@
-# InfluxDB Editor
+# InfluxDB Time Series Editor V1.0.0
 
-A browser-based editor for time series data stored in an **InfluxDB v2** database.  
+A browser-based editor for time series data stored in an **[InfluxDB V2](https://docs.influxdata.com/influxdb/v2/)** database.  
 The application is a Flask backend + W3.css/Chart.js frontend, packaged as a Docker container.
 
----
+For details, see [InfluxDB TS Editor Documentation]() with
+- [Getting Started]()
+- [Features]()
+- [Release Notes]()
+- [Usage]()
 
-## Features
-
-* **Browse** buckets, measurements, tag key/value pairs and field keys via cascading dropdowns
-* **Time range** selection with quick-range presets (1 h, 6 h, 24 h, 7 d, 30 d)
-* **Visualise** queried field values in an interactive line chart (Chart.js)
-* **Edit** individual data points directly in a scrollable table
-* **Side-by-side chart** – original values (blue) and modified values (orange) shown simultaneously for review
-* **Commit** writes the modified points back to InfluxDB (same measurement/tags/timestamp → overwrites the field value)
-* **Persistent settings** – URL, organisation and optionally the API token are saved across sessions
+![Editor](./docs/img/influx_ts_editor.jpg)

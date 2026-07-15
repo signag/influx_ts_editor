@@ -76,4 +76,26 @@ The **Query** button will execute a query with the current settings.
 
 To immediately see the effect of changing *Quick Range* or *Quick Shift*, you can activate the **Auto Query** checkbox.
 
-## Data 
+## Data
+
+The query will retrieve the Time Series data from the InfluxDB and present them as chart and as table:
+
+![Data](./img/time_series_data.jpg)
+
+The example above is a Time Series for the temperature measured by a sensor which, in certain time periods, was exposed to direct sun radiation, producing the exceptional peaks of unrelistic air temperatures.
+
+**NOTE**: Timestamps in the chart are presented as UTC, because this is the internal representation in InfluxDB.
+
+Blue lines and data points represent the original data.     
+Orange lines and data points represent the modified data.
+
+You can hover with the mouse over the data points to visualize timestamp and Field Values.
+
+### Editing Field Values
+
+In the column *Modified Value* you can enter modified values.     
+Modified rows are highlighted and carry a special marker.
+
+### Committing changes
+
+After review of modifications, use button **Commit Changes** to commit the modified Field Values to the database

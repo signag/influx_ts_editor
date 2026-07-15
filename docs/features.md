@@ -18,6 +18,9 @@
 
 ## Architecture
 
+The application is a Flask backend + W3.css/Chart.js frontend, packaged as a Docker container.
+
+
 ```
 Browser (W3.css + Chart.js)
         │  HTTP / JSON
@@ -39,7 +42,7 @@ for a single-user container deployment.
 InfluxDB v2 supports in-place field replacement: writing a new `Point` with the
 same **measurement + tags + timestamp** simply overwrites the stored field value.  
 The editor uses this mechanism – no data is deleted; only the changed field values
-are re-written with the new values supplied by the user.
+are re-written with the new values supplied by the user, retaining their original tag sets.
 
 ---
 

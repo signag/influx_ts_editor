@@ -13,6 +13,7 @@ not_in_nav: |
 nav:
   - Home: index.md
   - Getting Started: getting_started.md
+  - Release Notes: release_notes.md
   - Features: features.md
   - Usage: usage.md
   
