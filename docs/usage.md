@@ -4,12 +4,12 @@
 
 ## Starting *Influx TS Editor*
 
-In a browser, enter URL and port specified during [installation](./getting_started.md#installation), e.g.
+In a browser, enter URL and port specified during [installation](./getting_started.md#installation), e.g.   
 http://localhost:5000
 
 ## Connecting to an InfluxDB Instance
 
-When initially started the section for *Connection Settings* is shown with empty credential fields:
+When initially started, the section for *Connection Settings* is shown with empty credential fields:
 
 ![Connect](./img/influx_db_connect.jpg)
 
@@ -42,7 +42,7 @@ Tag filters can be removed by clicking on the red rectange on the right side of 
 
 ## Selecting a Time Range
 
-To locate the Time Series data to be modified you need to select the relevant time range:
+To locate the Time Series data to be modified, you need to select the relevant time range:
 
 ![Time Range](./img/time_range_selection.jpg)
 
@@ -55,17 +55,17 @@ You can now either choose a different time range using the calendar controls for
 ### Quick Range
 
 To change the size of time window, you can use one of the *Quick Range* buttons.     
-This will update the time range **keeping the center** of the previously set range.
+This will update the time range, **keeping the center** of the previously set range.
 
 **NOTE**: If the stop time would be later than the current time, it is set to the current time.
 
 ### Quick Shift
 
-The center field of *Qick Shift* displays the active time range. It is updated after pressing one of the *Quick Range* buttons.
+The center field of *Qick Shift* displays the active size of the time range. It is updated after pressing one of the *Quick Range* buttons.
 
 Using the **+** and **-** buttons, you can increse or decrease the window size.
 
-Using the **```<```** or **```>```** buttons, you can shift the time range backward or foreward.     
+Using the **```<```** or **```>```** buttons, you can shift the time range backward or foreward in time.     
 The shift will be by **half the window size**.
 
 **NOTE**: If the stop time would be later than the current time, it is set to the current time.
@@ -75,6 +75,8 @@ The shift will be by **half the window size**.
 The **Query** button will execute a query with the current settings.
 
 To immediately see the effect of changing *Quick Range* or *Quick Shift*, you can activate the **Auto Query** checkbox.
+
+*Auto Query* is not executed when the time range is changed by use of the calendar controls.
 
 ## Data
 
@@ -99,3 +101,5 @@ Modified rows are highlighted and carry a special marker.
 ### Committing changes
 
 After review of modifications, use button **Commit Changes** to commit the modified Field Values to the database
+
+To reverse all modifications, use the **Clear Modifications** button.

@@ -7,7 +7,7 @@
 * **Browse** buckets, measurements, tag key/value pairs and field keys via cascading dropdowns
 * **Time range** selection with quick-range presets (1 h, 6 h, 12 h, 24 h, 7 d, 30 d)
 * **Time Range shift** for shifting the region of interest on the time scale
-* **Visualise** queried field values in an interactive line chart
+* **Visualize** queried field values in an interactive line chart
 * **Auto Query** for immediate visualization update on time range change
 * **Edit** individual data points directly in a scrollable table
 * **Side-by-side chart** – original values (blue) and modified values (orange) shown simultaneously for review

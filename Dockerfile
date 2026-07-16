@@ -1,5 +1,7 @@
 FROM python:3.11-slim
 
+LABEL maintainer="signag"
+
 WORKDIR /app
 
 # Install dependencies first (layer-cached)
@@ -8,6 +10,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY app.py .
+COPY version_doc.py .
+COPY version.py .
+COPY static/ static/
 COPY templates/ templates/
 
 # Persistent storage for settings

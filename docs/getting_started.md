@@ -6,7 +6,7 @@
 
 - An instance of an [Influx DB V2](https://docs.influxdata.com/influxdb/v2/)    
 ([Influx DB V3](https://docs.influxdata.com/influxdb3/core/) is currently not yet supported)
-- A PC or Linux system with Python 3 installed 
+- Either a PC or Linux system with Python 3 installed 
 - or alternatively a Docker container manager on an arbitrary system, such as a NAS.    
 When you are running InfluxDB in a Docker container, you may want to install *Influx TS Editor* on the same Docker instance.
 
@@ -14,18 +14,50 @@ When you are running InfluxDB in a Docker container, you may want to install *In
 
 ## Installation
 
-### Quick start with Docker Compose
+### Create Docker Container with Image from Docker Hub
 
-```bash
-git clone https://github.com/signag/influx_ts_editor.git
-cd influx_editor
-docker compose up --build
+Image: [https://hub.docker.com/repository/docker/signag/influx_ts_editor](https://hub.docker.com/repository/docker/signag/influx_ts_editor)
+
+In an arbitrary working directory on the server hosting Docker, create 
+
+```compose.yaml```
+
+```yml
+services:
+  influx_ts_editor:
+    image: signag/influx_ts_editor
+    container_name: influx_ts_editor
+    network_mode: "host"
+    ports:
+      - "5000:5000"
+    volumes:
+      - influx_ts_editor-data:/data
+    environment:
+      - SETTINGS_FILE=/data/settings.json
+      - LOG_LEVEL=ERROR
+    restart: unless-stopped
+    privileged: true
+    
+volumes:
+  influx_ts_editor-data:  
 ```
 
-Then open **http://localhost:5000** in your browser.
+Adjust the ```ports``` mapping and ```LOG_LEVEL``` to your needs.
 
 Connection settings (URL, organisation, optionally token) are stored in a named Docker volume
 so they survive container restarts.
+
+Then run
+
+```
+docker compose pull influx_ts_editor
+docker compose create influx_ts_editor
+docker compose start influx_ts_editor
+```
+
+From an arbitrarary browser, open           
+**```http://<host>:5000```**    
+replacing ```<host>``` with IP address or network name of your Docker host.
 
 ---
 

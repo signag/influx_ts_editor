@@ -1,15 +1,20 @@
+name: influx_ts_editor
 services:
-  influx-editor:
+  influx_ts_editor:
+    container_name: influx_ts_editor
     build: .
+    image: signag/influx_ts_editor
+    network_mode: "host"
     ports:
       - "5000:5000"
     volumes:
       # Persist connection settings across container restarts
-      - influx-editor-data:/data
+      - influx_ts_editor-data:/data
     environment:
-      SETTINGS_FILE: /data/settings.json
-      LOG_LEVEL: INFO
+      - SETTINGS_FILE=/data/settings.json
+      - LOG_LEVEL=ERROR
     restart: unless-stopped
-
+    privileged: true
+    
 volumes:
-  influx-editor-data:
+  influx_ts_editor-data:
