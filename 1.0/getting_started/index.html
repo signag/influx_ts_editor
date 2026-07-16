@@ -550,13 +550,13 @@ When you are running InfluxDB in a Docker container, you may want to install <em
 <h2 id="installation">Installation</h2>
 <h3 id="create-docker-container-with-image-from-docker-hub">Create Docker Container with Image from Docker Hub</h3>
 <p>Image: <a href="https://hub.docker.com/repository/docker/signag/influx_ts_editor">https://hub.docker.com/repository/docker/signag/influx_ts_editor</a></p>
+<p>The image is built for <code>linux/amd64,linux/arm64</code> architectures</p>
 <p>In an arbitrary working directory on the server hosting Docker, create </p>
 <p><code>compose.yaml</code></p>
 <pre><code class="language-yml">services:
   influx_ts_editor:
     image: signag/influx_ts_editor
     container_name: influx_ts_editor
-    network_mode: &quot;host&quot;
     ports:
       - &quot;5000:5000&quot;
     volumes:
