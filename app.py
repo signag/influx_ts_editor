@@ -45,31 +45,6 @@ class _ConnectionManager:
         self.error: str | None = None
 
     # ------------------------------------------------------------------
-    def connect_old(self, url: str, token: str, org: str) -> tuple[bool, str]:
-        try:
-            if self.client:
-                self.client.close()
-            client = InfluxDBClient(url=url, token=token, org=org, timeout=10_000)
-            health = client.health()
-            if health.status == "pass":
-                self.client = client
-                self.org = org
-                self.url = url
-                self.status = "connected"
-                self.error = None
-                return True, "Connected successfully"
-            client.close()
-            msg = f"Health check failed: {health.message}"
-            self.status = "error"
-            self.error = msg
-            return False, msg
-        except Exception:  # noqa: BLE001
-            logger.exception("connect failed")
-            self.status = "error"
-            # Static message – full details are in server logs
-            self.error = "Connection failed. Verify URL, organization and API token."
-            return False, self.error
-        
     def connect(self, url: str, token: str, org: str) -> tuple[bool, str]:
         try:
             if self.client:

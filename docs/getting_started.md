@@ -18,6 +18,8 @@ When you are running InfluxDB in a Docker container, you may want to install *In
 
 Image: [https://hub.docker.com/repository/docker/signag/influx_ts_editor](https://hub.docker.com/repository/docker/signag/influx_ts_editor)
 
+The image is built for ```linux/amd64,linux/arm64``` architectures
+
 In an arbitrary working directory on the server hosting Docker, create 
 
 ```compose.yaml```
