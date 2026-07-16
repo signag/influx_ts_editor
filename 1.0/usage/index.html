@@ -659,10 +659,10 @@
 <h1 id="influx-time-series-editor-usage">Influx Time Series Editor Usage</h1>
 <p><a href="../"><img alt="Up" src="../img/goup.gif" /></a></p>
 <h2 id="starting-influx-ts-editor">Starting <em>Influx TS Editor</em></h2>
-<p>In a browser, enter URL and port specified during <a href="../getting_started/#installation">installation</a>, e.g.
+<p>In a browser, enter URL and port specified during <a href="../getting_started/#installation">installation</a>, e.g. <br />
 http://localhost:5000</p>
 <h2 id="connecting-to-an-influxdb-instance">Connecting to an InfluxDB Instance</h2>
-<p>When initially started the section for <em>Connection Settings</em> is shown with empty credential fields:</p>
+<p>When initially started, the section for <em>Connection Settings</em> is shown with empty credential fields:</p>
 <p><img alt="Connect" src="../img/influx_db_connect.jpg" /></p>
 <ul>
 <li>Enter server and port of your InfluxDB instance</li>
@@ -682,24 +682,25 @@ Each <em>Tag Filter</em> requires a <a href="https://docs.influxdata.com/influxd
 <p>Tag Filters will only be available for selection after at least a <em>Bucket</em> and a <em>Measurement</em> have been specified.</p>
 <p>Tag filters can be removed by clicking on the red rectange on the right side of a filter entry.</p>
 <h2 id="selecting-a-time-range">Selecting a Time Range</h2>
-<p>To locate the Time Series data to be modified you need to select the relevant time range:</p>
+<p>To locate the Time Series data to be modified, you need to select the relevant time range:</p>
 <p><img alt="Time Range" src="../img/time_range_selection.jpg" /></p>
 <p><strong>NOTE</strong>: Time range specification use the local date/time.</p>
 <p>Initially, the time range is set to one hour before the current time.</p>
 <p>You can now either choose a different time range using the calendar controls for <em>Start Time</em> and <em>Stop Time</em>.</p>
 <h3 id="quick-range">Quick Range</h3>
 <p>To change the size of time window, you can use one of the <em>Quick Range</em> buttons.   <br />
-This will update the time range <strong>keeping the center</strong> of the previously set range.</p>
+This will update the time range, <strong>keeping the center</strong> of the previously set range.</p>
 <p><strong>NOTE</strong>: If the stop time would be later than the current time, it is set to the current time.</p>
 <h3 id="quick-shift">Quick Shift</h3>
-<p>The center field of <em>Qick Shift</em> displays the active time range. It is updated after pressing one of the <em>Quick Range</em> buttons.</p>
+<p>The center field of <em>Qick Shift</em> displays the active size of the time range. It is updated after pressing one of the <em>Quick Range</em> buttons.</p>
 <p>Using the <strong>+</strong> and <strong>-</strong> buttons, you can increse or decrease the window size.</p>
-<p>Using the <strong><code>&lt;</code></strong> or <strong><code>&gt;</code></strong> buttons, you can shift the time range backward or foreward.   <br />
+<p>Using the <strong><code>&lt;</code></strong> or <strong><code>&gt;</code></strong> buttons, you can shift the time range backward or foreward in time.   <br />
 The shift will be by <strong>half the window size</strong>.</p>
 <p><strong>NOTE</strong>: If the stop time would be later than the current time, it is set to the current time.</p>
 <h3 id="query">Query</h3>
 <p>The <strong>Query</strong> button will execute a query with the current settings.</p>
 <p>To immediately see the effect of changing <em>Quick Range</em> or <em>Quick Shift</em>, you can activate the <strong>Auto Query</strong> checkbox.</p>
+<p><em>Auto Query</em> is not executed when the time range is changed by use of the calendar controls.</p>
 <h2 id="data">Data</h2>
 <p>The query will retrieve the Time Series data from the InfluxDB and present them as chart and as table:</p>
 <p><img alt="Data" src="../img/time_series_data.jpg" /></p>
@@ -713,6 +714,7 @@ Orange lines and data points represent the modified data.</p>
 Modified rows are highlighted and carry a special marker.</p>
 <h3 id="committing-changes">Committing changes</h3>
 <p>After review of modifications, use button <strong>Commit Changes</strong> to commit the modified Field Values to the database</p>
+<p>To reverse all modifications, use the <strong>Clear Modifications</strong> button.</p>
 
 
 

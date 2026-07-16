@@ -306,10 +306,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#quick-start-with-docker-compose" class="md-nav__link">
+  <a href="#create-docker-container-with-image-from-docker-hub" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick start with Docker Compose
+        Create Docker Container with Image from Docker Hub
       
     </span>
   </a>
@@ -482,10 +482,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#quick-start-with-docker-compose" class="md-nav__link">
+  <a href="#create-docker-container-with-image-from-docker-hub" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick start with Docker Compose
+        Create Docker Container with Image from Docker Hub
       
     </span>
   </a>
@@ -542,20 +542,45 @@
 <ul>
 <li>An instance of an <a href="https://docs.influxdata.com/influxdb/v2/">Influx DB V2</a>  <br />
 (<a href="https://docs.influxdata.com/influxdb3/core/">Influx DB V3</a> is currently not yet supported)</li>
-<li>A PC or Linux system with Python 3 installed </li>
+<li>Either a PC or Linux system with Python 3 installed </li>
 <li>or alternatively a Docker container manager on an arbitrary system, such as a NAS.  <br />
 When you are running InfluxDB in a Docker container, you may want to install <em>Influx TS Editor</em> on the same Docker instance.</li>
 </ul>
 <hr />
 <h2 id="installation">Installation</h2>
-<h3 id="quick-start-with-docker-compose">Quick start with Docker Compose</h3>
-<pre><code class="language-bash">git clone https://github.com/signag/influx_ts_editor.git
-cd influx_editor
-docker compose up --build
+<h3 id="create-docker-container-with-image-from-docker-hub">Create Docker Container with Image from Docker Hub</h3>
+<p>Image: <a href="https://hub.docker.com/repository/docker/signag/influx_ts_editor">https://hub.docker.com/repository/docker/signag/influx_ts_editor</a></p>
+<p>In an arbitrary working directory on the server hosting Docker, create </p>
+<p><code>compose.yaml</code></p>
+<pre><code class="language-yml">services:
+  influx_ts_editor:
+    image: signag/influx_ts_editor
+    container_name: influx_ts_editor
+    network_mode: &quot;host&quot;
+    ports:
+      - &quot;5000:5000&quot;
+    volumes:
+      - influx_ts_editor-data:/data
+    environment:
+      - SETTINGS_FILE=/data/settings.json
+      - LOG_LEVEL=ERROR
+    restart: unless-stopped
+    privileged: true
+
+volumes:
+  influx_ts_editor-data:  
 </code></pre>
-<p>Then open <strong>http://localhost:5000</strong> in your browser.</p>
+<p>Adjust the <code>ports</code> mapping and <code>LOG_LEVEL</code> to your needs.</p>
 <p>Connection settings (URL, organisation, optionally token) are stored in a named Docker volume
 so they survive container restarts.</p>
+<p>Then run</p>
+<pre><code>docker compose pull influx_ts_editor
+docker compose create influx_ts_editor
+docker compose start influx_ts_editor
+</code></pre>
+<p>From an arbitrarary browser, open         <br />
+<strong><code>http://&lt;host&gt;:5000</code></strong>  <br />
+replacing <code>&lt;host&gt;</code> with IP address or network name of your Docker host.</p>
 <hr />
 <h3 id="running-locally-without-docker">Running locally (without Docker)</h3>
 <pre><code class="language-bash">git clone https://github.com/signag/influx_ts_editor.git
