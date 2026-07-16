@@ -29,7 +29,6 @@ services:
   influx_ts_editor:
     image: signag/influx_ts_editor
     container_name: influx_ts_editor
-    network_mode: "host"
     ports:
       - "5000:5000"
     volumes:
