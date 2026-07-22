@@ -97,6 +97,7 @@ You can hover with the mouse over the data points to visualize timestamp and Fie
 
 In the column *Modified Value* you can enter modified values.     
 Modified rows are highlighted and carry a special marker.
+Modified values are committed using the original field value type retrieved during the query.
 
 ### Committing changes
 

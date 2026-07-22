@@ -11,7 +11,7 @@
 * **Auto Query** for immediate visualization update on time range change
 * **Edit** individual data points directly in a scrollable table
 * **Side-by-side chart** – original values (blue) and modified values (orange) shown simultaneously for review
-* **Commit** writes the modified points back to InfluxDB (same measurement/tags/timestamp → overwrites the field value)
+* **Commit** writes the modified points back to InfluxDB (same measurement/tags/timestamp → overwrites the field value) while preserving the queried field value type
 * **Persistent settings** – URL, organisation and optionally the API token are saved across sessions
 
 ---
