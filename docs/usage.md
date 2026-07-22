@@ -5,7 +5,7 @@
 ## Starting *Influx TS Editor*
 
 In a browser, enter URL and port specified during [installation](./getting_started.md#installation), e.g.   
-http://localhost:5000
+http://localhost:8087
 
 ## Connecting to an InfluxDB Instance
 

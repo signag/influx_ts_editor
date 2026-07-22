@@ -18,12 +18,12 @@ COPY templates/ templates/
 # Persistent storage for settings
 RUN mkdir -p /data
 
-EXPOSE 5000
+EXPOSE 8087
 
 ENV SETTINGS_FILE=/data/settings.json \
     LOG_LEVEL=INFO \
-    PORT=5000
+    PORT=8087
 
 # Use gunicorn for production; single worker is appropriate for this
 # single-user, stateful app (connection manager is module-level).
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--timeout", "60", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8087", "--workers", "1", "--timeout", "60", "app:app"]

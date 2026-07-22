@@ -30,7 +30,7 @@ services:
     image: signag/influx_ts_editor
     container_name: influx_ts_editor
     ports:
-      - "5000:5000"
+      - "8087:8087"
     volumes:
       - influx_ts_editor-data:/data
     environment:
@@ -57,7 +57,7 @@ docker compose start influx_ts_editor
 ```
 
 From an arbitrarary browser, open           
-**```http://<host>:5000```**    
+**```http://<host>:8087```**    
 replacing ```<host>``` with IP address or network name of your Docker host.
 
 ---
@@ -73,7 +73,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-The app starts on **http://localhost:5000**.  
+The app starts on **http://localhost:8087**.  
 Settings are stored in `data/settings.json` (created automatically).
 
 
@@ -85,7 +85,7 @@ Settings are stored in `data/settings.json` (created automatically).
 | Variable       | Default                          | Description                          |
 |----------------|----------------------------------|--------------------------------------|
 | `SETTINGS_FILE`| `./data/settings.json`           | Path to the persisted settings file  |
-| `PORT`         | `5000`                           | HTTP port the server listens on      |
+| `PORT`         | `8087`                           | HTTP port the server listens on      |
 | `LOG_LEVEL`    | `ERROR`                          | Python logging level                 |
 | `DEBUG`        | `false`                          | Set to `true` for Flask debug mode   |
 

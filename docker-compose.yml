@@ -6,7 +6,7 @@ services:
     image: signag/influx_ts_editor
     network_mode: "host"
     ports:
-      - "5000:5000"
+      - "8087:8087"
     volumes:
       # Persist connection settings across container restarts
       - influx_ts_editor-data:/data
