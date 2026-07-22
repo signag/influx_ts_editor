@@ -660,7 +660,7 @@
 <p><a href="../"><img alt="Up" src="../img/goup.gif" /></a></p>
 <h2 id="starting-influx-ts-editor">Starting <em>Influx TS Editor</em></h2>
 <p>In a browser, enter URL and port specified during <a href="../getting_started/#installation">installation</a>, e.g. <br />
-http://localhost:5000</p>
+http://localhost:8087</p>
 <h2 id="connecting-to-an-influxdb-instance">Connecting to an InfluxDB Instance</h2>
 <p>When initially started, the section for <em>Connection Settings</em> is shown with empty credential fields:</p>
 <p><img alt="Connect" src="../img/influx_db_connect.jpg" /></p>
@@ -711,7 +711,8 @@ Orange lines and data points represent the modified data.</p>
 <p>You can hover with the mouse over the data points to visualize timestamp and Field Values.</p>
 <h3 id="editing-field-values">Editing Field Values</h3>
 <p>In the column <em>Modified Value</em> you can enter modified values.   <br />
-Modified rows are highlighted and carry a special marker.</p>
+Modified rows are highlighted and carry a special marker.
+Modified values are committed using the original field value type retrieved during the query.</p>
 <h3 id="committing-changes">Committing changes</h3>
 <p>After review of modifications, use button <strong>Commit Changes</strong> to commit the modified Field Values to the database</p>
 <p>To reverse all modifications, use the <strong>Clear Modifications</strong> button.</p>

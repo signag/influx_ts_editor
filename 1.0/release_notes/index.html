@@ -310,6 +310,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v101" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        V1.0.1
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="V1.0.1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bugfixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bugfixes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v100" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -409,6 +448,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v101" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        V1.0.1
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="V1.0.1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bugfixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bugfixes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v100" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -438,6 +516,17 @@
 
 <h1 id="influx-time-series-editor-release-notes">Influx Time Series Editor Release Notes</h1>
 <p><a href="../"><img alt="Up" src="../img/goup.gif" /></a></p>
+<h2 id="v101">V1.0.1</h2>
+<h3 id="bugfixes">Bugfixes</h3>
+<ul>
+<li>Fixed typing of field values for modified values.
+<br>Previously, an error occured during update when values did not have the correct type.
+<br>Now, the type of the field value is determined from the original time series. Updated values are casted to this type before update.</li>
+</ul>
+<h3 id="changes">Changes</h3>
+<ul>
+<li>The default port was changed from 5000 to 8087 which is next to the default port uset by InfluxDB</li>
+</ul>
 <h2 id="v100">V1.0.0</h2>
 <p>Initial Commit</p>
 

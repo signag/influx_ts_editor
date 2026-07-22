@@ -558,7 +558,7 @@ When you are running InfluxDB in a Docker container, you may want to install <em
     image: signag/influx_ts_editor
     container_name: influx_ts_editor
     ports:
-      - &quot;5000:5000&quot;
+      - &quot;8087:8087&quot;
     volumes:
       - influx_ts_editor-data:/data
     environment:
@@ -579,7 +579,7 @@ docker compose create influx_ts_editor
 docker compose start influx_ts_editor
 </code></pre>
 <p>From an arbitrarary browser, open         <br />
-<strong><code>http://&lt;host&gt;:5000</code></strong>  <br />
+<strong><code>http://&lt;host&gt;:8087</code></strong>  <br />
 replacing <code>&lt;host&gt;</code> with IP address or network name of your Docker host.</p>
 <hr />
 <h3 id="running-locally-without-docker">Running locally (without Docker)</h3>
@@ -590,7 +590,7 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python app.py
 </code></pre>
-<p>The app starts on <strong>http://localhost:5000</strong>.<br />
+<p>The app starts on <strong>http://localhost:8087</strong>.<br />
 Settings are stored in <code>data/settings.json</code> (created automatically).</p>
 <hr />
 <h2 id="environment-variables">Environment variables</h2>
@@ -610,7 +610,7 @@ Settings are stored in <code>data/settings.json</code> (created automatically).<
 </tr>
 <tr>
 <td><code>PORT</code></td>
-<td><code>5000</code></td>
+<td><code>8087</code></td>
 <td>HTTP port the server listens on</td>
 </tr>
 <tr>
