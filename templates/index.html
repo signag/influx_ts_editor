@@ -332,7 +332,7 @@
 // -------------------------------------------------------------------------
 // State
 // -------------------------------------------------------------------------
-let _results      = [];       // [{timestamp, value}] from last query
+let _results      = [];       // [{timestamp, value, value_type}] from last query
 let _modified     = {};       // {timestamp: newValue}
 let _currentQuery = null;     // last query parameters
 let _chart        = null;     // Chart.js instance
@@ -731,6 +731,33 @@ function collectTags() {
     return tags;
 }
 
+function findRecord(timestamp) {
+    return _results.find(r => r.timestamp === timestamp) || null;
+}
+
+function isNumericType(valueType) {
+    return valueType === "int" || valueType === "float";
+}
+
+function parseTypedValue(rawValue, valueType) {
+    if (rawValue === "" || rawValue === null || rawValue === undefined) return null;
+    if (valueType === "int") {
+        const num = Number(rawValue);
+        return Number.isInteger(num) ? num : null;
+    }
+    if (valueType === "float") {
+        const num = Number(rawValue);
+        return Number.isFinite(num) ? num : null;
+    }
+    if (valueType === "bool") {
+        const normalized = String(rawValue).trim().toLowerCase();
+        if (["true", "t", "1", "yes", "y", "on"].includes(normalized)) return true;
+        if (["false", "f", "0", "no", "n", "off"].includes(normalized)) return false;
+        return null;
+    }
+    return rawValue;
+}
+
 // -------------------------------------------------------------------------
 // Chart
 // -------------------------------------------------------------------------
@@ -805,10 +832,10 @@ function renderChart() {
 
 function refreshChartMods() {
     if (!_chart || !_results.length) return;
-    const modData = _results.map(r =>
-        Object.prototype.hasOwnProperty.call(_modified, r.timestamp)
-            ? _modified[r.timestamp] : r.value
-    );
+    const modData = _results.map(r => {
+        if (!Object.prototype.hasOwnProperty.call(_modified, r.timestamp)) return r.value;
+        return parseTypedValue(_modified[r.timestamp], r.value_type);
+    });
     const hasMods = Object.keys(_modified).length > 0;
     _chart.data.datasets[1].data   = modData;
     _chart.data.datasets[1].hidden = !hasMods;
@@ -830,6 +857,9 @@ function renderTable(page) {
         const ts  = r.timestamp;
         const mod = Object.prototype.hasOwnProperty.call(_modified, ts);
         const modVal = mod ? _modified[ts] : "";
+        const isNumeric = isNumericType(r.value_type);
+        const inputType = isNumeric ? "number" : "text";
+        const inputStep = r.value_type === "int" ? "1" : "any";
 
         const tr = document.createElement("tr");
         if (mod) tr.classList.add("row-modified");
@@ -839,7 +869,7 @@ function renderTable(page) {
           + "<td style='white-space:nowrap;font-family:monospace;'>" + esc(ts) + "</td>"
           + "<td style='text-align:right;'>" + esc(String(r.value)) + "</td>"
           + "<td>"
-          +   "<input type='number' step='any' class='w3-input w3-border mod-input'"
+          +   "<input type='" + inputType + "' step='" + inputStep + "' class='w3-input w3-border mod-input'"
           +   " data-ts='" + esc(ts) + "' data-idx='" + i + "'"
           +   " value='" + (mod ? esc(String(modVal)) : "") + "'"
           +   " placeholder='enter new value'"
@@ -875,7 +905,7 @@ function renderPagination(page) {
 
 function onModInput(input) {
     const ts  = input.dataset.ts;
-    const raw = input.value.trim();
+    const raw = input.value;
     const tr  = input.closest("tr");
     const flagCell = tr.querySelector("td:last-child");
 
@@ -884,9 +914,7 @@ function onModInput(input) {
         tr.classList.remove("row-modified");
         flagCell.innerHTML = "";
     } else {
-        const num = parseFloat(raw);
-        if (isNaN(num)) { return; }
-        _modified[ts] = num;
+        _modified[ts] = raw;
         tr.classList.add("row-modified");
         flagCell.innerHTML = "<span title='Modified' style='color:#f57c00;font-size:1.1em;'>&#9998;</span>";
     }
@@ -915,9 +943,17 @@ function updateCommitBtn() {
 // -------------------------------------------------------------------------
 async function doCommit() {
     if (!_currentQuery) return;
-    const updates = Object.entries(_modified).map(([timestamp, new_value]) => ({
-        timestamp, new_value
-    }));
+    const updates = Object.entries(_modified)
+        .map(([timestamp, new_value]) => {
+            const record = findRecord(timestamp);
+            if (!record) return null;
+            return {
+                timestamp,
+                new_value,
+                value_type: record.value_type
+            };
+        })
+        .filter(update => update !== null);
     if (updates.length === 0) return;
 
     const btn = document.getElementById("commitBtn");

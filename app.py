@@ -131,6 +131,60 @@ def _save_settings(settings: dict) -> bool:
         return False
 
 
+def _field_value_type(value) -> str:
+    if isinstance(value, bool):
+        return "bool"
+    if isinstance(value, int):
+        return "int"
+    if isinstance(value, float):
+        return "float"
+    if isinstance(value, str):
+        return "string"
+    return "unknown"
+
+
+def _coerce_field_value(value, value_type: str):
+    value_type = (value_type or "unknown").strip().lower()
+
+    if value_type == "bool":
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"true", "t", "1", "yes", "y", "on"}:
+                return True
+            if normalized in {"false", "f", "0", "no", "n", "off"}:
+                return False
+        raise ValueError
+
+    if value_type == "int":
+        if isinstance(value, bool):
+            raise ValueError
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            if value.is_integer():
+                return int(value)
+            raise ValueError
+        if isinstance(value, str):
+            return int(value.strip(), 10)
+        raise ValueError
+
+    if value_type == "float":
+        if isinstance(value, bool):
+            raise ValueError
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            return float(value.strip())
+        raise ValueError
+
+    if value_type == "string":
+        return value if isinstance(value, str) else str(value)
+
+    return value
+
+
 # ---------------------------------------------------------------------------
 # Routes – UI
 # ---------------------------------------------------------------------------
@@ -372,6 +426,7 @@ def api_query():
             {
                 "timestamp": row.get_time().isoformat(),
                 "value": row.get_value(),
+                "value_type": _field_value_type(row.get_value()),
             }
             for table in tables
             for row in table.records
@@ -402,18 +457,20 @@ def api_update():
         for upd in updates:
             ts = upd.get("timestamp")
             new_val = upd.get("new_value")
+            value_type = upd.get("value_type")
             if ts is None or new_val is None:
                 continue
+            try:
+                typed_value = _coerce_field_value(new_val, value_type)
+            except ValueError:
+                return jsonify({"error": f'Invalid value for timestamp "{ts}" and field type "{value_type}"'}), 400
             pt = Point(measurement)
             for tag in tags:
                 k = (tag.get("key") or "").strip()
                 v = (tag.get("value") or "").strip()
                 if k and v:
                     pt = pt.tag(k, v)
-            # Preserve integer type when the value has no fractional part
-            if isinstance(new_val, float) and new_val == int(new_val):
-                new_val = int(new_val)
-            pt = pt.field(field, new_val)
+            pt = pt.field(field, typed_value)
             pt = pt.time(ts)
             points.append(pt)
 
