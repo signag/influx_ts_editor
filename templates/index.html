@@ -758,22 +758,39 @@ function parseTypedValue(rawValue, valueType) {
     return rawValue;
 }
 
+const UTC_DATETIME_FORMAT = new Intl.DateTimeFormat(undefined, {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+});
+
+function formatUtcTimestamp(value) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return UTC_DATETIME_FORMAT.format(date);
+}
+
+function toChartPoint(record, value) {
+    const tsMillis = Date.parse(record.timestamp);
+    return Number.isNaN(tsMillis) ? null : { x: tsMillis, y: value };
+}
+
 // -------------------------------------------------------------------------
 // Chart
 // -------------------------------------------------------------------------
 function renderChart() {
-    const labels   = _results.map(r => {
-        // Show timestamp as locale string, strip timezone indicator for brevity
-        const d = new Date(r.timestamp);
-        return d.toLocaleString(undefined, { timeZone: "UTC",
-            year:"numeric", month:"2-digit", day:"2-digit",
-            hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false });
-    });
-    const origData = _results.map(r => r.value);
-    const modData  = _results.map(r =>
+    const origData = _results.map(r => toChartPoint(r, r.value)).filter(point => point !== null);
+    const modData  = _results.map(r => toChartPoint(
+        r,
         Object.prototype.hasOwnProperty.call(_modified, r.timestamp)
-            ? _modified[r.timestamp] : r.value
-    );
+            ? parseTypedValue(_modified[r.timestamp], r.value_type)
+            : r.value
+    )).filter(point => point !== null);
     const hasMods  = Object.keys(_modified).length > 0;
     const sparse   = _results.length > 300;
 
@@ -783,7 +800,6 @@ function renderChart() {
     _chart = new Chart(ctx, {
         type: "line",
         data: {
-            labels,
             datasets: [
                 {
                     label: "Original",
@@ -816,11 +832,19 @@ function renderChart() {
             plugins: {
                 legend: { display: true },
                 tooltip: { callbacks: {
-                    title: items => items[0].label
+                    title: items => formatUtcTimestamp(items[0].parsed.x)
                 }}
             },
             scales: {
-                x: { ticks: { maxTicksLimit: 12, maxRotation: 40 } },
+                x: {
+                    type: "linear",
+                    title: { display: true, text: "Time (UTC)" },
+                    ticks: {
+                        maxTicksLimit: 12,
+                        maxRotation: 40,
+                        callback: value => formatUtcTimestamp(Number(value))
+                    }
+                },
                 y: { title: {
                     display: true,
                     text: (_currentQuery && _currentQuery.field) || "Value"
@@ -832,10 +856,11 @@ function renderChart() {
 
 function refreshChartMods() {
     if (!_chart || !_results.length) return;
-    const modData = _results.map(r => {
-        if (!Object.prototype.hasOwnProperty.call(_modified, r.timestamp)) return r.value;
-        return parseTypedValue(_modified[r.timestamp], r.value_type);
-    });
+    const modData = _results.map(r => toChartPoint(r, (
+        Object.prototype.hasOwnProperty.call(_modified, r.timestamp)
+            ? parseTypedValue(_modified[r.timestamp], r.value_type)
+            : r.value
+    ))).filter(point => point !== null);
     const hasMods = Object.keys(_modified).length > 0;
     _chart.data.datasets[1].data   = modData;
     _chart.data.datasets[1].hidden = !hasMods;

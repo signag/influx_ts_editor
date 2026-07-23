@@ -86,7 +86,7 @@ The query will retrieve the Time Series data from the InfluxDB and present them 
 
 The example above is a Time Series for the temperature measured by a sensor which, in certain time periods, was exposed to direct sun radiation, producing the exceptional peaks of unrelistic air temperatures.
 
-**NOTE**: Timestamps in the chart are presented as UTC, because this is the internal representation in InfluxDB.
+**NOTE**: The chart x-axis uses the actual UTC timestamps from InfluxDB, so gaps between points reflect the real elapsed time.
 
 Blue lines and data points represent the original data.     
 Orange lines and data points represent the modified data.
