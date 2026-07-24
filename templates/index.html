@@ -90,6 +90,32 @@
         }
 
         .header-bar { cursor: default; }
+
+        /* Chart drag-to-select range */
+        #chartContainer { position: relative; height: 350px; margin-bottom: 16px; }
+        #chartDragRect {
+            position: absolute;
+            background: rgba(128,128,128,0.25);
+            border: 1px solid rgba(80,80,80,0.5);
+            pointer-events: none;
+            display: none;
+            z-index: 5;
+        }
+        #chartHint {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            padding: 3px 10px;
+            border-radius: 3px;
+            font-size: 0.83em;
+            pointer-events: none;
+            display: none;
+            z-index: 10;
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body>
@@ -280,8 +306,10 @@
         <div class="w3-container w3-padding">
 
             <!-- Chart -->
-            <div style="position:relative; height:350px; margin-bottom:16px;">
+            <div id="chartContainer">
                 <canvas id="myChart"></canvas>
+                <div id="chartDragRect"></div>
+                <div id="chartHint"></div>
             </div>
 
             <!-- Table -->
@@ -341,6 +369,11 @@ let _page         = 1;
 const PAGE_SIZE   = 50;
 let _tagCount     = 0;        // monotonic ID for tag rows
 
+// Chart drag-to-select range state
+let _dragStartMs  = null;     // ms timestamp at mousedown
+let _dragStartX   = null;     // canvas pixel x at mousedown
+let _isDragging   = false;
+
 // -------------------------------------------------------------------------
 // Init
 // -------------------------------------------------------------------------
@@ -348,6 +381,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setQuickRange(1, "h");
     await loadSettings();
     await refreshStatus();
+    attachChartDragListeners();
 });
 
 // -------------------------------------------------------------------------
@@ -896,6 +930,129 @@ function refreshChartMods() {
     _chart.data.datasets[1].data   = modData;
     _chart.data.datasets[1].hidden = !hasMods;
     _chart.update("none");
+}
+
+// -------------------------------------------------------------------------
+// Chart drag-to-select range
+// -------------------------------------------------------------------------
+function attachChartDragListeners() {
+    const canvas = document.getElementById("myChart");
+    canvas.addEventListener("mousedown",  onChartMouseDown);
+    canvas.addEventListener("mousemove",  onChartMouseMove);
+    canvas.addEventListener("mouseup",    onChartMouseUp);
+    canvas.addEventListener("mouseleave", onChartMouseLeave);
+}
+
+function _getChartTimeAtClientX(clientX) {
+    const rect = document.getElementById("myChart").getBoundingClientRect();
+    const x = clientX - rect.left;
+    const ca = _chart.chartArea;
+    const clamped = Math.max(ca.left, Math.min(ca.right, x));
+    return _chart.scales.x.getValueForPixel(clamped);
+}
+
+function onChartMouseDown(e) {
+    if (!_chart || e.button !== 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const ca = _chart.chartArea;
+    if (x < ca.left || x > ca.right || y < ca.top || y > ca.bottom) return;
+
+    _dragStartMs = _getChartTimeAtClientX(e.clientX);
+    _dragStartX  = x;
+    _isDragging  = true;
+
+    document.getElementById("chartDragRect").style.display = "none";
+    document.getElementById("chartHint").textContent = "Drag mouse to set the range";
+    document.getElementById("chartHint").style.display = "block";
+
+    _chart.options.plugins.tooltip.enabled = false;
+    _chart.update("none");
+
+    e.preventDefault();
+}
+
+function onChartMouseMove(e) {
+    if (!_chart || !_isDragging) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const ca = _chart.chartArea;
+    const clampedX = Math.max(ca.left, Math.min(ca.right, x));
+
+    const dragRect = document.getElementById("chartDragRect");
+    const left  = Math.min(_dragStartX, clampedX);
+    const width = Math.abs(clampedX - _dragStartX);
+    dragRect.style.left    = left + "px";
+    dragRect.style.top     = ca.top + "px";
+    dragRect.style.width   = width + "px";
+    dragRect.style.height  = (ca.bottom - ca.top) + "px";
+    dragRect.style.display = width > 2 ? "block" : "none";
+}
+
+function onChartMouseUp(e) {
+    if (!_chart || !_isDragging) return;
+    _isDragging = false;
+
+    const endMs      = _getChartTimeAtClientX(e.clientX);
+    const startMs    = _dragStartMs;
+
+    document.getElementById("chartDragRect").style.display = "none";
+    document.getElementById("chartHint").style.display = "none";
+
+    _chart.options.plugins.tooltip.enabled = true;
+    _chart.update("none");
+
+    _dragStartMs = null;
+    _dragStartX  = null;
+
+    const diffMs = Math.abs(endMs - startMs);
+    const MIN_DRAG_MS = 5 * 60 * 1000; // 5 minutes
+    if (diffMs < MIN_DRAG_MS) return;  // too small – keep existing range
+
+    // Determine unit and round up extension
+    const diffMinutes = diffMs / (60 * 1000);
+    const diffHours   = diffMs / (3600 * 1000);
+    const diffDays    = diffMs / (86400 * 1000);
+
+    let amount, unit;
+    if (diffMinutes < 60) {
+        unit   = "m";
+        amount = Math.ceil(diffMinutes);
+    } else if (diffHours < 24) {
+        unit   = "h";
+        amount = Math.ceil(diffHours);
+    } else {
+        unit   = "d";
+        amount = Math.ceil(diffDays);
+    }
+
+    const centerMs = (startMs + endMs) / 2;
+
+    let halfExtMs;
+    if (unit === "m")      halfExtMs = amount * 60 * 1000 / 2;
+    else if (unit === "h") halfExtMs = amount * 3600 * 1000 / 2;
+    else                   halfExtMs = amount * 86400 * 1000 / 2;
+
+    const startDate = new Date(centerMs - halfExtMs);
+    const stopDate  = new Date(centerMs + halfExtMs);
+
+    document.getElementById("inputStart").value = toDTLocal(startDate);
+    document.getElementById("inputStop").value  = toDTLocal(stopDate);
+    document.getElementById("quickShiftAmount").innerHTML = amount + " " + unit;
+}
+
+function onChartMouseLeave(e) {
+    if (!_isDragging) return;
+    _isDragging  = false;
+    _dragStartMs = null;
+    _dragStartX  = null;
+    document.getElementById("chartDragRect").style.display = "none";
+    document.getElementById("chartHint").style.display = "none";
+    if (_chart) {
+        _chart.options.plugins.tooltip.enabled = true;
+        _chart.update("none");
+    }
 }
 
 // -------------------------------------------------------------------------
