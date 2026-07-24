@@ -1,4 +1,4 @@
-site_name: influx-ts-editor V1.0.x Documentation
+site_name: influx-ts-editor V1.1.x Documentation
 plugins:
     - search
     - mike

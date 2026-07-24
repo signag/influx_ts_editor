@@ -65,12 +65,32 @@ The center field of *Qick Shift* displays the active size of the time range. It 
 
 Using the **+** and **-** buttons, you can increse or decrease the window size.
 The minimum size is **1 m**. Decreasing **1 h** changes to **59 m**. Increasing **59 m** changes to **1 h**.   
-If the current unit is ```m``` (minute), the value is increased or decreased by ```5 m```.
+If the current unit is **m** (minute), the value is increased or decreased by **5 m**.
 
 Using the **```<```** or **```>```** buttons, you can shift the time range backward or foreward in time.     
 The shift will be by **half the window size**.
 
 **NOTE**: If the stop time would be later than the current time, it is set to the current time.
+
+### Selecting Range with Mouse
+
+When the data chart is visible, you can select a range by click-dragging with the mouse in the chart area:
+
+![Range_drag](./img/time_range_mouse.jpg)
+
+- Left click at the start time.
+<br>This will show a hint indicating that range selection mode is active
+- With mouse-down, drag to the intended end of the range.
+<br>While dragging, the range will be indicated by gray overlay.
+- Release the mouse button.
+<br>This will adjust *Start Time* and *Stop Time* as well as the range size under *Quick Shift*
+
+If the selected range is smaller than 5 minutes, the original range is retained.
+
+The new range will be centered at the selected range.     
+The range width will be rounded up to an integer number of units **m**, **h** or **d**, whatever fits best.
+
+If *Auto Query* is selected, the new range will immediately be applied.
 
 ### Query
 

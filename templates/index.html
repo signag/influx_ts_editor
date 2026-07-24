@@ -1040,6 +1040,8 @@ function onChartMouseUp(e) {
     document.getElementById("inputStart").value = toDTLocal(startDate);
     document.getElementById("inputStop").value  = toDTLocal(stopDate);
     document.getElementById("quickShiftAmount").innerHTML = amount + " " + unit;
+
+    autoQuery();
 }
 
 function onChartMouseLeave(e) {

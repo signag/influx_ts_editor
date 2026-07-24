@@ -4,6 +4,11 @@
 
 ## V1.1.0
 
+### New Features
+
+- Range selection by [mouse click-dragging](./usage.md#selecting-range-with-mouse).
+- Minimum time range window is now 1 m (1 minute)
+
 ### Changes
 
 - The graphical representation of results now shows time series points on a real time axis instead as equally-spaced points. So, the distance of points on the x-axis correctly represents their time difference.

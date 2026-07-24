@@ -8,10 +8,12 @@
 * **Time range** selection with quick-range presets (1 h, 6 h, 12 h, 24 h, 7 d, 30 d)
 * **Time Range shift** for shifting the region of interest on the time scale
 * **Visualize** queried field values in an interactive line chart
+* **Time Range selection** with **mouse** click-dragging within the chart
 * **Auto Query** for immediate visualization update on time range change
 * **Edit** individual data points directly in a scrollable table
 * **Side-by-side chart** – original values (blue) and modified values (orange) shown simultaneously for review
-* **Commit** writes the modified points back to InfluxDB (same measurement/tags/timestamp → overwrites the field value) while preserving the queried field value type
+* **Commit** writes the modified points back to InfluxDB 
+<br>(same measurement/tags/timestamp → overwrites the field value) while preserving the queried field value type
 * **Persistent settings** – URL, organisation and optionally the API token are saved across sessions
 
 ---
@@ -48,4 +50,4 @@ are re-written with the new values supplied by the user, retaining their origina
 
 ## Credits
 
-The initial version for this tool was created with [GitHub Copilot](https://github.com/features/copilot)
+This tool was created with support of [GitHub Copilot](https://github.com/features/copilot)
