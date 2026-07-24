@@ -64,6 +64,7 @@ This will update the time range, **keeping the center** of the previously set ra
 The center field of *Qick Shift* displays the active size of the time range. It is updated after pressing one of the *Quick Range* buttons.
 
 Using the **+** and **-** buttons, you can increse or decrease the window size.
+The minimum size is **1 m**. Decreasing **1 h** changes to **59 m**. Increasing **59 m** changes to **1 h**.
 
 Using the **```<```** or **```>```** buttons, you can shift the time range backward or foreward in time.     
 The shift will be by **half the window size**.
