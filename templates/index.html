@@ -567,7 +567,12 @@ function setQuickRange(amount, unit) {
 
     const middleDate = new Date((startDate.getTime() + stopDate.getTime()) / 2);
 
-    if (unit === "h") {
+    if (unit === "m") {
+        stopDate = new Date(middleDate.getTime() + (amount / 2) * 60 * 1000);
+        if (stopDate > now) stopDate = new Date(now);
+        startDate = new Date(stopDate.getTime() - amount * 60 * 1000);
+        document.getElementById("quickShiftAmount").innerHTML = amount + " m";
+    } else if (unit === "h") {
         // hours: safe to do straight millisecond math
         stopDate = new Date(middleDate.getTime() + (amount / 2) * 3600 * 1000);
         if (stopDate > now) stopDate = new Date(now);
@@ -603,8 +608,12 @@ function shiftQuickRange(direction) {
             autoQuery();
             return;
         } else if (amount === 1) {
-            if (unit === "h") {
+            if (unit === "m") {
                 return; // cannot reduce further
+            } else if (unit === "h") {
+                autoQuery();
+                setQuickRange(59, "m");
+                return;
             } else if (unit === "d") {
                 autoQuery();
                 setQuickRange(23, "h");
@@ -613,11 +622,14 @@ function shiftQuickRange(direction) {
             }
         }
     } else if (direction === "increase") {
-        if ((unit === "h" && amount < 23) || (unit === "d")) {
+        if ((unit === "m" && amount < 59) || (unit === "h" && amount < 23) || (unit === "d")) {
             amount += 1;
             setQuickRange(amount, unit);
             autoQuery();
             return;
+        } else if (unit === "m" && amount === 59) {
+            setQuickRange(1, "h");
+            autoQuery();
         } else if (unit === "h" && amount === 23) {
             setQuickRange(1, "d");
             autoQuery();
@@ -634,7 +646,15 @@ function shiftRange(amount, unit) {
     var stopDate   = new Date(inputStop.value);
     const delta = stopDate.getTime() - startDate.getTime();
     const now   = new Date();
-    if      (unit === "h") {
+    if      (unit === "m") {
+        stopDate = new Date(stopDate.getTime() + amount * 60 * 1000);
+        if (stopDate > now) {
+            stopDate = new Date(now);
+            startDate = new Date(stopDate.getTime() - delta);
+        } else {
+            startDate = new Date(startDate.getTime() + amount * 60 * 1000);
+        }
+    } else if (unit === "h") {
         stopDate.setHours(stopDate.getHours() + amount);
         if (stopDate > now) {
             stopDate = new Date(now);
