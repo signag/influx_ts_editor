@@ -2,6 +2,12 @@
 
 [![Up](img/goup.gif)](./index.md)
 
+## V1.1.0
+
+### Changes
+
+- The graphical representation of results now shows time series points on a real time axis instead as equally-spaced points. So, the distance of points on the x-axis correctly represents their time difference.
+
 ## V1.0.1
 
 ### Bugfixes
