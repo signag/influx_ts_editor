@@ -603,7 +603,12 @@ function shiftQuickRange(direction) {
         shiftRange(amount/2, unit);
     } else if (direction === "reduce") {
         if (amount > 1) {
-            amount -= 1;
+            if (unit === "m") {
+                amount -= 5;
+                if (amount < 1) amount = 1;
+            } else {
+                amount -= 1;
+            }
             setQuickRange(amount, unit);
             autoQuery();
             return;
@@ -623,7 +628,12 @@ function shiftQuickRange(direction) {
         }
     } else if (direction === "increase") {
         if ((unit === "m" && amount < 59) || (unit === "h" && amount < 23) || (unit === "d")) {
-            amount += 1;
+            if (unit === "m") {
+                amount += 5;
+                if (amount > 59) amount = 59;
+            } else {
+                amount += 1;
+            }
             setQuickRange(amount, unit);
             autoQuery();
             return;
