@@ -11,9 +11,11 @@
 * **Time Range selection** with **mouse** click-dragging within the chart
 * **Auto Query** for immediate visualization update on time range change
 * **Edit** individual data points directly in a scrollable table
-* **Side-by-side chart** – original values (blue) and modified values (orange) shown simultaneously for review
+* **Delete** individual data points by selecting action **DEL** in the Action column
+* **Side-by-side chart** – original values (blue) and modified/filtered values (orange) shown simultaneously for review
 * **Commit** writes the modified points back to InfluxDB 
-<br>(same measurement/tags/timestamp → overwrites the field value) while preserving the queried field value type
+<br>(same measurement/tags/timestamp → overwrites the field value) while preserving the queried field value type,
+<br>and deletes points marked with **DEL** using the InfluxDB delete API
 * **Persistent settings** – URL, organisation and optionally the API token are saved across sessions
 
 ---
@@ -43,8 +45,15 @@ for a single-user container deployment.
 
 InfluxDB v2 supports in-place field replacement: writing a new `Point` with the
 same **measurement + tags + timestamp** simply overwrites the stored field value.  
-The editor uses this mechanism – no data is deleted; only the changed field values
+The editor uses this mechanism for value edits – only the changed field values
 are re-written with the new values supplied by the user, retaining their original tag sets.
+
+## Deleting data
+
+Individual data points can be deleted using the InfluxDB v2 delete API.  
+The editor sends a delete request with a 1-microsecond time window `[t, t+1μs)` and a
+predicate that matches the exact **measurement**, **field**, and **tag set** of the queried
+data, ensuring only the selected point is removed.
 
 ---
 
