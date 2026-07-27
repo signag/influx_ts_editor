@@ -121,8 +121,15 @@ In the column *Modified Value* you can enter modified values.
 Modified rows are highlighted and carry a special marker.
 Modified values are committed using the original field value type retrieved during the query.
 
+### Deleting Data Points
+
+In the column *Action* you can select action code **DEL** to mark a data point for deletion.     
+Rows marked for deletion are highlighted in red with strikethrough text and the *Modified Value* input is disabled.
+
+When at least one row is marked with **DEL**, the orange chart line is shown without those points, giving a preview of the data after deletion.
+
 ### Committing changes
 
-After review of modifications, use button **Commit Changes** to commit the modified Field Values to the database
+After review of modifications, use button **Commit Changes** to commit the modified Field Values and/or deletions to the database.
 
-To reverse all modifications, use the **Clear Modifications** button.
+To reverse all modifications and deletions, use the **Clear Modifications** button.

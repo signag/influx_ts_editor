@@ -67,6 +67,18 @@
         /* Highlight modified rows */
         tr.row-modified { background-color: #fff8e1 !important; }
 
+        /* Highlight rows marked for deletion */
+        tr.row-deleted { background-color: #ffebee !important; }
+        tr.row-deleted td { color: #b71c1c; text-decoration: line-through; }
+        tr.row-deleted td.no-strikethrough { text-decoration: none; }
+
+        /* Compact action select in table */
+        .action-sel {
+            width: 70px;
+            padding: 2px 4px;
+            font-size: 0.9em;
+        }
+
         /* Compact number input in table */
         .mod-input {
             width: 120px;
@@ -321,6 +333,7 @@
                             <th style="position:sticky;top:0;z-index:10; background-color: #4b4b4b;">Timestamp (UTC)</th>
                             <th style="position:sticky;top:0;z-index:10; background-color: #4b4b4b;">Original Value</th>
                             <th style="position:sticky;top:0;z-index:10; background-color: #4b4b4b;">Modified Value</th>
+                            <th style="width:80px; text-align:center; position:sticky;top:0;z-index:10; background-color: #4b4b4b;">Action</th>
                             <th style="width:60px; text-align:center; position:sticky;top:0;z-index:10; background-color: #4b4b4b;">⚑</th>
                         </tr>
                     </thead>
@@ -363,6 +376,7 @@
 // -------------------------------------------------------------------------
 let _results      = [];       // [{timestamp, value, value_type}] from last query
 let _modified     = {};       // {timestamp: newValue}
+let _deletions    = new Set(); // timestamps marked for DEL
 let _currentQuery = null;     // last query parameters
 let _chart        = null;     // Chart.js instance
 let _page         = 1;
@@ -921,12 +935,14 @@ function renderChart() {
 
 function refreshChartMods() {
     if (!_chart || !_results.length) return;
-    const modData = _results.map(r => toChartPoint(r, (
-        Object.prototype.hasOwnProperty.call(_modified, r.timestamp)
-            ? parseTypedValue(_modified[r.timestamp], r.value_type)
-            : r.value
-    ))).filter(point => point !== null);
-    const hasMods = Object.keys(_modified).length > 0;
+    const hasMods = Object.keys(_modified).length > 0 || _deletions.size > 0;
+    const modData = _results
+        .filter(r => !_deletions.has(r.timestamp))
+        .map(r => toChartPoint(r, (
+            Object.prototype.hasOwnProperty.call(_modified, r.timestamp)
+                ? parseTypedValue(_modified[r.timestamp], r.value_type)
+                : r.value
+        ))).filter(point => point !== null);
     _chart.data.datasets[1].data   = modData;
     _chart.data.datasets[1].hidden = !hasMods;
     _chart.update("none");
@@ -1071,6 +1087,7 @@ function renderTable(page) {
         const r   = _results[i];
         const ts  = r.timestamp;
         const mod = Object.prototype.hasOwnProperty.call(_modified, ts);
+        const del = _deletions.has(ts);
         const modVal = mod ? _modified[ts] : "";
         const isNumeric = isNumericType(r.value_type);
         const inputType = isNumeric ? "number" : "text";
@@ -1078,6 +1095,7 @@ function renderTable(page) {
 
         const tr = document.createElement("tr");
         if (mod) tr.classList.add("row-modified");
+        if (del) tr.classList.add("row-deleted");
 
         tr.innerHTML =
             "<td>" + (i + 1) + "</td>"
@@ -1088,10 +1106,18 @@ function renderTable(page) {
           +   " data-ts='" + esc(ts) + "' data-idx='" + i + "'"
           +   " value='" + (mod ? esc(String(modVal)) : "") + "'"
           +   " placeholder='enter new value'"
-          +   " oninput='onModInput(this)'>"
+          +   " oninput='onModInput(this)'"
+          +   (del ? " disabled" : "") + ">"
+          + "</td>"
+          + "<td style='text-align:center;' class='no-strikethrough'>"
+          +   "<select class='action-sel w3-select' data-ts='" + esc(ts) + "' onchange='onActionChange(this)'>"
+          +   "<option value=''></option>"
+          +   "<option value='DEL'" + (del ? " selected" : "") + ">DEL</option>"
+          +   "</select>"
           + "</td>"
           + "<td style='text-align:center;'>"
-          +   (mod ? "<span title='Modified' style='color:#f57c00;font-size:1.1em;'>&#9998;</span>" : "")
+          +   (del  ? "<span title='Marked for deletion' style='color:#b71c1c;font-size:1.1em;'>&#10006;</span>"
+               : mod ? "<span title='Modified' style='color:#f57c00;font-size:1.1em;'>&#9998;</span>" : "")
           + "</td>";
         tbody.appendChild(tr);
     }
@@ -1137,8 +1163,35 @@ function onModInput(input) {
     updateCommitBtn();
 }
 
+function onActionChange(select) {
+    const ts = select.dataset.ts;
+    const tr = select.closest("tr");
+    const modInput = tr.querySelector(".mod-input");
+    const flagCell = tr.querySelector("td:last-child");
+
+    if (select.value === "DEL") {
+        _deletions.add(ts);
+        tr.classList.add("row-deleted");
+        tr.classList.remove("row-modified");
+        if (modInput) modInput.disabled = true;
+        flagCell.innerHTML = "<span title='Marked for deletion' style='color:#b71c1c;font-size:1.1em;'>&#10006;</span>";
+    } else {
+        _deletions.delete(ts);
+        tr.classList.remove("row-deleted");
+        if (modInput) modInput.disabled = false;
+        const hasMod = Object.prototype.hasOwnProperty.call(_modified, ts);
+        if (hasMod) tr.classList.add("row-modified");
+        flagCell.innerHTML = hasMod
+            ? "<span title='Modified' style='color:#f57c00;font-size:1.1em;'>&#9998;</span>"
+            : "";
+    }
+    refreshChartMods();
+    updateCommitBtn();
+}
+
 function clearModifications() {
     _modified = {};
+    _deletions = new Set();
     if (_results.length > 0) {
         renderTable(_page);
         refreshChartMods();
@@ -1147,10 +1200,15 @@ function clearModifications() {
 }
 
 function updateCommitBtn() {
-    const count = Object.keys(_modified).length;
-    document.getElementById("commitBtn").disabled = count === 0;
+    const modCount = Object.keys(_modified).length;
+    const delCount = _deletions.size;
+    const total = modCount + delCount;
+    document.getElementById("commitBtn").disabled = total === 0;
+    const parts = [];
+    if (modCount > 0) parts.push(modCount + " modification(s)");
+    if (delCount > 0) parts.push(delCount + " deletion(s)");
     document.getElementById("modCount").textContent =
-        count > 0 ? count + " modification(s) pending" : "";
+        parts.length > 0 ? parts.join(", ") + " pending" : "";
 }
 
 // -------------------------------------------------------------------------
@@ -1169,29 +1227,58 @@ async function doCommit() {
             };
         })
         .filter(update => update !== null);
-    if (updates.length === 0) return;
+    const deletions = [..._deletions];
+
+    if (updates.length === 0 && deletions.length === 0) return;
 
     const btn = document.getElementById("commitBtn");
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>Committing…';
 
     try {
-        const data = await apiPost("/api/update", {
-            bucket:      _currentQuery.bucket,
-            measurement: _currentQuery.measurement,
-            tags:        _currentQuery.tags,
-            field:       _currentQuery.field,
-            updates
-        });
-        if (data.success) {
-            toast("✓ " + data.updated + " record(s) updated.", "green");
-            // Re-run original query so UI reflects persisted data
-            await doQuery();
-        } else {
-            toast("✗ Commit failed: " + (data.error || "unknown error"), "red");
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa fa-check"></i>&nbsp;Commit Changes';
+        let updatedCount = 0;
+        let deletedCount = 0;
+
+        if (updates.length > 0) {
+            const data = await apiPost("/api/update", {
+                bucket:      _currentQuery.bucket,
+                measurement: _currentQuery.measurement,
+                tags:        _currentQuery.tags,
+                field:       _currentQuery.field,
+                updates
+            });
+            if (!data.success) {
+                toast("✗ Commit failed: " + (data.error || "unknown error"), "red");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-check"></i>&nbsp;Commit Changes';
+                return;
+            }
+            updatedCount = data.updated;
         }
+
+        if (deletions.length > 0) {
+            const data = await apiPost("/api/delete", {
+                bucket:      _currentQuery.bucket,
+                measurement: _currentQuery.measurement,
+                tags:        _currentQuery.tags,
+                field:       _currentQuery.field,
+                timestamps:  deletions
+            });
+            if (!data.success) {
+                toast("✗ Delete failed: " + (data.error || "unknown error"), "red");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-check"></i>&nbsp;Commit Changes';
+                return;
+            }
+            deletedCount = data.deleted;
+        }
+
+        const parts = [];
+        if (updatedCount > 0) parts.push(updatedCount + " record(s) updated");
+        if (deletedCount > 0) parts.push(deletedCount + " record(s) deleted");
+        toast("✓ " + parts.join(", ") + ".", "green");
+        // Re-run original query so UI reflects persisted data
+        await doQuery();
     } catch (e) {
         toast("✗ " + e.message, "red");
         btn.disabled = false;

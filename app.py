@@ -6,6 +6,8 @@ Provides REST API for browsing and modifying InfluxDB v2 time series data.
 import json
 import logging
 import os
+import re
+from datetime import datetime, timedelta
 
 from flask import Flask, jsonify, render_template, request, g
 from influxdb_client import InfluxDBClient, Point
@@ -141,6 +143,14 @@ def _field_value_type(value) -> str:
     if isinstance(value, str):
         return "string"
     return "unknown"
+
+
+def _parse_influx_timestamp(ts_str: str) -> datetime:
+    """Parse an ISO 8601 timestamp from InfluxDB, truncating sub-microsecond precision."""
+    s = ts_str.replace("Z", "+00:00")
+    # Truncate more than 6 fractional-second digits (nanoseconds) to microseconds
+    s = re.sub(r"(\.\d{6})\d*", r"\1", s)
+    return datetime.fromisoformat(s)
 
 
 def _coerce_field_value(value, value_type: str):
@@ -479,6 +489,52 @@ def api_update():
     except Exception:  # noqa: BLE001
         logger.exception("update failed")
         return jsonify({"error": "Update failed. See server logs for details."}), 500
+
+
+@app.route("/api/delete", methods=["POST"])
+def api_delete():
+    err = _require_connection()
+    if err:
+        return err
+    data = request.get_json(force=True) or {}
+    bucket = (data.get("bucket") or "").strip()
+    measurement = (data.get("measurement") or "").strip()
+    tags = data.get("tags") or []
+    field = (data.get("field") or "").strip()
+    timestamps = data.get("timestamps") or []
+
+    if not all([bucket, measurement, field]) or not timestamps:
+        return jsonify({"error": "bucket, measurement, field and timestamps are required"}), 400
+
+    try:
+        # Build predicate for measurement, field, and optional tags
+        predicates = [f'_measurement="{measurement}"', f'_field="{field}"']
+        for tag in tags:
+            k = (tag.get("key") or "").strip()
+            v = (tag.get("value") or "").strip()
+            if k and v:
+                predicates.append(f'{k}="{v}"')
+        predicate = " AND ".join(predicates)
+
+        delete_api = conn.client.delete_api()
+        deleted = 0
+        for ts in timestamps:
+            dt = _parse_influx_timestamp(ts)
+            # Use a 1-microsecond window [dt, dt+1μs) to target exactly this point
+            stop_dt = dt + timedelta(microseconds=1)
+            delete_api.delete(
+                start=dt,
+                stop=stop_dt,
+                predicate=predicate,
+                bucket=bucket,
+                org=conn.org,
+            )
+            deleted += 1
+
+        return jsonify({"success": True, "deleted": deleted})
+    except Exception:  # noqa: BLE001
+        logger.exception("delete failed")
+        return jsonify({"error": "Delete failed. See server logs for details."}), 500
 
 
 # ---------------------------------------------------------------------------
