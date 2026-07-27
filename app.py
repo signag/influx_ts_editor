@@ -507,8 +507,10 @@ def api_delete():
         return jsonify({"error": "bucket, measurement, field and timestamps are required"}), 400
 
     try:
-        # Build predicate for measurement, field, and optional tags
-        predicates = [f'_measurement="{measurement}"', f'_field="{field}"']
+        # Build predicate for measurement and optional tags.
+        # The InfluxDB v2 OSS delete API does not support _field predicates
+        # ("delete by field is not supported"), so _field is intentionally omitted.
+        predicates = [f'_measurement="{measurement}"']
         for tag in tags:
             k = (tag.get("key") or "").strip()
             v = (tag.get("value") or "").strip()
