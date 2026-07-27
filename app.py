@@ -375,7 +375,7 @@ def api_field_keys():
     try:
         q = (
             'import "influxdata/influxdb/schema"\n'
-            f'schema.measurementFieldKeys(bucket: "{bucket}", measurement: "{measurement}")'
+            f'schema.measurementFieldKeys(bucket: "{bucket}", measurement: "{measurement}", start: -370d)'
         )
         tables = conn.query_api().query(q, org=conn.org)
         field_keys = sorted(

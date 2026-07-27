@@ -2,6 +2,13 @@
 
 [![Up](img/goup.gif)](./index.md)
 
+## V1.1.1
+
+### Changes
+
+- Extended the time range for query of field keys from the InfluxDB schema from -30d (default) to -370d.
+<br>This will retrieve all field keys for a measurement which have been used within the last year.
+
 ## V1.1.0
 
 ### New Features
