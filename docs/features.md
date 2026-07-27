@@ -58,6 +58,10 @@ ensuring only the selected point is removed.
 > **Note:** The InfluxDB v2 OSS delete API does not support filtering by field name
 > (`_field`). The delete therefore targets all fields stored for the given
 > measurement, tag set, and timestamp.
+>
+> To avoid unintended mass deletions, the editor first counts points that match the
+> exact deletion predicate and timestamp windows. If that count exceeds the number
+> of selected rows, deletion is aborted and an error is shown.
 
 ---
 

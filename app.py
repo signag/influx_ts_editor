@@ -511,19 +511,51 @@ def api_delete():
         # The InfluxDB v2 OSS delete API does not support _field predicates
         # ("delete by field is not supported"), so _field is intentionally omitted.
         predicates = [f'_measurement="{measurement}"']
+        tag_filters = ""
         for tag in tags:
             k = (tag.get("key") or "").strip()
             v = (tag.get("value") or "").strip()
             if k and v:
                 predicates.append(f'{k}="{v}"')
+                tag_filters += f'\n  |> filter(fn: (r) => r["{k}"] == "{v}")'
         predicate = " AND ".join(predicates)
+
+        parsed_timestamps = []
+        affected_points = 0
+        query_api = conn.query_api()
+        for ts in timestamps:
+            dt = _parse_influx_timestamp(ts)
+            stop_dt = dt + timedelta(microseconds=1)
+            parsed_timestamps.append((dt, stop_dt))
+
+            count_query = (
+                f'from(bucket: "{bucket}")\n'
+                f'  |> range(start: {dt.isoformat()}, stop: {stop_dt.isoformat()})\n'
+                f'  |> filter(fn: (r) => r._measurement == "{measurement}")'
+                f'{tag_filters}\n'
+                f'  |> count(column: "_value")'
+            )
+            tables = query_api.query(count_query, org=conn.org)
+            affected_points += sum(
+                (row.get_value() or 0)
+                for table in tables
+                for row in table.records
+            )
+
+        if affected_points > len(timestamps):
+            return jsonify(
+                {
+                    "error": (
+                        "Predicate for deletion would affect more data points than intended. "
+                        "Deletion not executed. You can try to extend the tag set."
+                    )
+                }
+            ), 400
 
         delete_api = conn.client.delete_api()
         deleted = 0
-        for ts in timestamps:
-            dt = _parse_influx_timestamp(ts)
+        for dt, stop_dt in parsed_timestamps:
             # Use a 1-microsecond window [dt, dt+1μs) to target exactly this point
-            stop_dt = dt + timedelta(microseconds=1)
             delete_api.delete(
                 start=dt,
                 stop=stop_dt,
