@@ -52,8 +52,12 @@ are re-written with the new values supplied by the user, retaining their origina
 
 Individual data points can be deleted using the InfluxDB v2 delete API.  
 The editor sends a delete request with a 1-microsecond time window `[t, t+1μs)` and a
-predicate that matches the exact **measurement**, **field**, and **tag set** of the queried
-data, ensuring only the selected point is removed.
+predicate that matches the exact **measurement** and **tag set** of the queried data,
+ensuring only the selected point is removed.
+
+> **Note:** The InfluxDB v2 OSS delete API does not support filtering by field name
+> (`_field`). The delete therefore targets all fields stored for the given
+> measurement, tag set, and timestamp.
 
 ---
 
