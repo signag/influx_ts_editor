@@ -60,9 +60,17 @@ ensuring only the selected point is removed.
 > (`_field`). The delete therefore targets all fields stored for the given
 > measurement, tag set, and timestamp.
 >
-> To avoid unintended mass deletions, the editor first counts points that match the
-> exact deletion predicate and timestamp windows. If that count exceeds the number
-> of selected rows, deletion is aborted and an error is shown.
+> When the editor detects that more fields exist for the queried measurement, tag set,
+> and timestamp than were requested for deletion, it automatically uses a
+> **read-modify-write** procedure to preserve the other fields:
+>
+> 1. Query all fields of the data point using the given measurement and tag set.
+> 2. Remove the field requested for deletion from the result set.
+> 3. Delete the entire original data point (all fields).
+> 4. Write back the remaining fields as a new data point.
+>
+> Like insertion, this operation requires the tag set filter to be **complete** so
+> that the correct data point is uniquely identified.
 
 ---
 
