@@ -1,4 +1,4 @@
-# InfluxDB Time Series Editor V1.2.0
+# InfluxDB Time Series Editor V1.3.0
 
 A browser-based editor for time series data stored in an **[InfluxDB V2](https://docs.influxdata.com/influxdb/v2/)** database.  
 The application is a Flask backend + W3.css/Chart.js frontend, packaged as a Docker container.

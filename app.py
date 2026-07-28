@@ -449,6 +449,7 @@ def api_query():
 
 @app.route("/api/update", methods=["POST"])
 def api_update():
+    logger.debug("api_update ENTRY")
     err = _require_connection()
     if err:
         return err
@@ -468,12 +469,14 @@ def api_update():
             ts = upd.get("timestamp")
             new_val = upd.get("new_value")
             value_type = upd.get("value_type")
+            logger.debug(f"Processing update for timestamp {ts} with new value {new_val} and value type {value_type}")
             if ts is None or new_val is None:
                 continue
             try:
                 typed_value = _coerce_field_value(new_val, value_type)
             except ValueError:
                 return jsonify({"error": f'Invalid value for timestamp "{ts}" and field type "{value_type}"'}), 400
+            logger.debug(f"Coerced value for timestamp {ts}: {typed_value} (type: {_field_value_type(typed_value)})")
             pt = Point(measurement)
             for tag in tags:
                 k = (tag.get("key") or "").strip()
@@ -482,6 +485,7 @@ def api_update():
                     pt = pt.tag(k, v)
             pt = pt.field(field, typed_value)
             pt = pt.time(ts)
+            logger.debug(f"Prepared point for timestamp {ts}: {pt.to_line_protocol()}")
             points.append(pt)
 
         conn.write_api().write(bucket=bucket, org=conn.org, record=points)
@@ -493,6 +497,7 @@ def api_update():
 
 @app.route("/api/delete", methods=["POST"])
 def api_delete():
+    logger.debug("api_delete ENTRY")
     err = _require_connection()
     if err:
         return err
@@ -525,6 +530,7 @@ def api_delete():
         query_api = conn.query_api()
         for ts in timestamps:
             dt = _parse_influx_timestamp(ts)
+            logger.debug(f"Parsed timestamp {ts} -> {dt.isoformat()}")
             stop_dt = dt + timedelta(microseconds=1)
             parsed_timestamps.append((dt, stop_dt))
 
@@ -535,17 +541,20 @@ def api_delete():
                 f'{tag_filters}\n'
                 f'  |> count(column: "_value")'
             )
+            logger.debug(f"Count query for timestamp {ts}:\n{count_query}")
             tables = query_api.query(count_query, org=conn.org)
             affected_points += sum(
                 (row.get_value() or 0)
                 for table in tables
                 for row in table.records
             )
+            logger.debug(f"Affected points for timestamp {ts}: {affected_points}")
 
         delete_api = conn.client.delete_api()
         deleted = 0
 
         if affected_points > len(timestamps):
+            logger.debug("Detected multi-field points; using read-modify-write approach for deletion")
             # Multi-field point: InfluxDB cannot delete a single field.
             # Use a read-modify-write approach for each timestamp:
             #   1. Query all fields for that measurement/tags/timestamp.
@@ -560,6 +569,7 @@ def api_delete():
                     f'{tag_filters}\n'
                     f'  |> sort(columns: ["_time"])'
                 )
+                logger.debug(f"All-fields query for timestamp {ts}:\n{all_fields_query}")
                 tables = query_api.query(all_fields_query, org=conn.org)
 
                 # Collect remaining fields, excluding the one to be deleted
@@ -569,6 +579,7 @@ def api_delete():
                     for row in table.records
                     if row.get_field() != field
                 }
+                logger.debug(f"Remaining fields for timestamp {ts}: {remaining_fields}")
 
                 # Delete the original data point (all fields)
                 delete_api.delete(
