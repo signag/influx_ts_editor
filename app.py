@@ -542,28 +542,67 @@ def api_delete():
                 for row in table.records
             )
 
-        if affected_points > len(timestamps):
-            return jsonify(
-                {
-                    "error": (
-                        "Predicate for deletion would affect more data points than intended. "
-                        "Deletion not executed. You can try to extend the tag set."
-                    )
-                }
-            ), 400
-
         delete_api = conn.client.delete_api()
         deleted = 0
-        for dt, stop_dt in parsed_timestamps:
-            # Use a 1-microsecond window [dt, dt+1μs) to target exactly this point
-            delete_api.delete(
-                start=dt,
-                stop=stop_dt,
-                predicate=predicate,
-                bucket=bucket,
-                org=conn.org,
-            )
-            deleted += 1
+
+        if affected_points > len(timestamps):
+            # Multi-field point: InfluxDB cannot delete a single field.
+            # Use a read-modify-write approach for each timestamp:
+            #   1. Query all fields for that measurement/tags/timestamp.
+            #   2. Remove the field requested for deletion.
+            #   3. Delete the entire data point (all fields).
+            #   4. Write back the remaining fields (if any).
+            for ts, (dt, stop_dt) in zip(timestamps, parsed_timestamps):
+                all_fields_query = (
+                    f'from(bucket: "{bucket}")\n'
+                    f'  |> range(start: {dt.isoformat()}, stop: {stop_dt.isoformat()})\n'
+                    f'  |> filter(fn: (r) => r._measurement == "{measurement}")'
+                    f'{tag_filters}\n'
+                    f'  |> sort(columns: ["_time"])'
+                )
+                tables = query_api.query(all_fields_query, org=conn.org)
+
+                # Collect remaining fields, excluding the one to be deleted
+                remaining_fields = {
+                    row.get_field(): row.get_value()
+                    for table in tables
+                    for row in table.records
+                    if row.get_field() != field
+                }
+
+                # Delete the original data point (all fields)
+                delete_api.delete(
+                    start=dt,
+                    stop=stop_dt,
+                    predicate=predicate,
+                    bucket=bucket,
+                    org=conn.org,
+                )
+                deleted += 1
+
+                # Write back the remaining fields
+                if remaining_fields:
+                    pt = Point(measurement)
+                    for tag in tags:
+                        k = (tag.get("key") or "").strip()
+                        v = (tag.get("value") or "").strip()
+                        if k and v:
+                            pt = pt.tag(k, v)
+                    pt = pt.time(dt)
+                    for f_key, f_val in remaining_fields.items():
+                        pt = pt.field(f_key, f_val)
+                    conn.write_api().write(bucket=bucket, org=conn.org, record=pt)
+        else:
+            for dt, stop_dt in parsed_timestamps:
+                # Use a 1-microsecond window [dt, dt+1μs) to target exactly this point
+                delete_api.delete(
+                    start=dt,
+                    stop=stop_dt,
+                    predicate=predicate,
+                    bucket=bucket,
+                    org=conn.org,
+                )
+                deleted += 1
 
         return jsonify({"success": True, "deleted": deleted})
     except Exception:  # noqa: BLE001

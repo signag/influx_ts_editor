@@ -2,6 +2,15 @@
 
 [![Up](img/goup.gif)](./index.md)
 
+## V1.3.0
+
+### New Features
+
+- [Deletion of a single field from a multi-field point](./features.md#deleting-data):
+  When a deletion would affect more fields than intended (because InfluxDB does not
+  support field-level deletion), a read-modify-write procedure is used automatically.
+  The remaining fields of the data point are preserved.
+
 ## V1.2.0
 
 ### New Features
