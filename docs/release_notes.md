@@ -2,6 +2,12 @@
 
 [![Up](img/goup.gif)](./index.md)
 
+## V1.2.0
+
+### New Features
+
+- Supports [deletion of data points](./usage.md#deleting-data-points)
+
 ## V1.1.1
 
 ### Changes

@@ -128,6 +128,10 @@ Rows marked for deletion are highlighted in red with strikethrough text and the 
 
 When at least one row is marked with **DEL**, the orange chart line is shown without those points, giving a preview of the data after deletion.
 
+For restrictions, see [Deleting Data](./features.md#deleting-data)
+
+![Delete_Point](./img/point_delete.jpg)
+
 ### Committing changes
 
 After review of modifications, use button **Commit Changes** to commit the modified Field Values and/or deletions to the database.
