@@ -72,6 +72,10 @@
         tr.row-deleted td { color: #b71c1c; text-decoration: line-through; }
         tr.row-deleted td.no-strikethrough { text-decoration: none; }
 
+        /* Highlight newly inserted rows */
+        tr.row-inserted { background-color: #e8f5e9 !important; }
+        tr.row-inserted td { color: #1b5e20; }
+
         /* Compact action select in table */
         .action-sel {
             width: 70px;
@@ -377,11 +381,15 @@
 let _results      = [];       // [{timestamp, value, value_type}] from last query
 let _modified     = {};       // {timestamp: newValue}
 let _deletions    = new Set(); // timestamps marked for DEL
+let _insertions   = new Set(); // timestamps of newly inserted rows (INS)
 let _currentQuery = null;     // last query parameters
 let _chart        = null;     // Chart.js instance
 let _page         = 1;
 const PAGE_SIZE   = 50;
 let _tagCount     = 0;        // monotonic ID for tag rows
+let _allTagKeys   = [];        // all tag keys for the current measurement
+let _tagKeysLoaded = false;   // whether tag keys have been loaded for the current measurement
+let _isFullyQualified = false; // whether all tag keys are covered by current tag filters
 
 // Chart drag-to-select range state
 let _dragStartMs  = null;     // ms timestamp at mousedown
@@ -515,6 +523,9 @@ async function onMeasurementChange() {
     const measurement = val("selMeasurement");
     resetSel("selField", "— Select Field —");
     clearTagFilters();
+    _allTagKeys      = [];
+    _tagKeysLoaded   = false;
+    _isFullyQualified = false;
     if (!bucket || !measurement) return;
 
     try {
@@ -526,6 +537,16 @@ async function onMeasurementChange() {
             (data.field_keys || []).forEach(f => sel.appendChild(opt(f)));
         }
     } catch (_) { toast("Failed to load field keys", "red"); }
+
+    try {
+        const data = await apiGet(
+            "/api/tag-keys?bucket=" + enc(bucket) + "&measurement=" + enc(measurement)
+        );
+        if (!data.error) {
+            _allTagKeys    = data.tag_keys || [];
+            _tagKeysLoaded = true;
+        }
+    } catch (_) {}
 }
 
 // -------------------------------------------------------------------------
@@ -778,6 +799,7 @@ async function doQuery() {
     const tags = collectTags();
     _currentQuery = { bucket, measurement, tags, field, start, stop };
     _modified     = {};
+    _insertions   = new Set();
 
     setMsg("queryMsg", "loading", "Querying…");
     try {
@@ -787,6 +809,9 @@ async function doQuery() {
             return;
         }
         _results = data.records || [];
+        _isFullyQualified = _tagKeysLoaded && _allTagKeys.every(k =>
+            tags.some(t => t.key === k)
+        );
         setMsg("queryMsg", "ok", _results.length + " record(s) found.");
         document.getElementById("recCountBadge").textContent = _results.length;
 
@@ -1084,23 +1109,45 @@ function renderTable(page) {
     tbody.innerHTML = "";
 
     for (let i = start; i < end; i++) {
-        const r   = _results[i];
-        const ts  = r.timestamp;
-        const mod = Object.prototype.hasOwnProperty.call(_modified, ts);
-        const del = _deletions.has(ts);
-        const modVal = mod ? _modified[ts] : "";
-        const isNumeric = isNumericType(r.value_type);
-        const inputType = isNumeric ? "number" : "text";
-        const inputStep = r.value_type === "int" ? "1" : "any";
+        const r          = _results[i];
+        const ts         = r.timestamp;
+        const isInserted = _insertions.has(ts);
+        const isLast     = (i === _results.length - 1);
+        const mod        = Object.prototype.hasOwnProperty.call(_modified, ts);
+        const del        = _deletions.has(ts);
+        const modVal     = mod ? _modified[ts] : "";
+        const isNumeric  = isNumericType(r.value_type);
+        const inputType  = isNumeric ? "number" : "text";
+        const inputStep  = r.value_type === "int" ? "1" : "any";
 
         const tr = document.createElement("tr");
-        if (mod) tr.classList.add("row-modified");
-        if (del) tr.classList.add("row-deleted");
+        if (isInserted) {
+            tr.classList.add("row-inserted");
+        } else {
+            if (mod) tr.classList.add("row-modified");
+            if (del) tr.classList.add("row-deleted");
+        }
+
+        const origDisplay = isInserted ? "—" : esc(String(r.value));
+
+        let actionOpts = "<option value=''></option>"
+                       + "<option value='DEL'" + (del ? " selected" : "") + ">DEL</option>";
+        if (_isFullyQualified && !isInserted && !isLast) {
+            actionOpts += "<option value='INS'>INS</option>";
+        }
+
+        const flagHtml = isInserted
+            ? "<span title='New insertion' style='color:#1b5e20;font-size:1.1em;'>&#43;</span>"
+            : del
+                ? "<span title='Marked for deletion' style='color:#b71c1c;font-size:1.1em;'>&#10006;</span>"
+                : mod
+                    ? "<span title='Modified' style='color:#f57c00;font-size:1.1em;'>&#9998;</span>"
+                    : "";
 
         tr.innerHTML =
             "<td>" + (i + 1) + "</td>"
           + "<td style='white-space:nowrap;font-family:monospace;'>" + esc(ts) + "</td>"
-          + "<td style='text-align:right;'>" + esc(String(r.value)) + "</td>"
+          + "<td style='text-align:right;'>" + origDisplay + "</td>"
           + "<td>"
           +   "<input type='" + inputType + "' step='" + inputStep + "' class='w3-input w3-border mod-input'"
           +   " data-ts='" + esc(ts) + "' data-idx='" + i + "'"
@@ -1111,13 +1158,11 @@ function renderTable(page) {
           + "</td>"
           + "<td style='text-align:center;' class='no-strikethrough'>"
           +   "<select class='action-sel w3-select' data-ts='" + esc(ts) + "' onchange='onActionChange(this)'>"
-          +   "<option value=''></option>"
-          +   "<option value='DEL'" + (del ? " selected" : "") + ">DEL</option>"
+          +   actionOpts
           +   "</select>"
           + "</td>"
           + "<td style='text-align:center;'>"
-          +   (del  ? "<span title='Marked for deletion' style='color:#b71c1c;font-size:1.1em;'>&#10006;</span>"
-               : mod ? "<span title='Modified' style='color:#f57c00;font-size:1.1em;'>&#9998;</span>" : "")
+          +   flagHtml
           + "</td>";
         tbody.appendChild(tr);
     }
@@ -1145,31 +1190,109 @@ function renderPagination(page) {
 }
 
 function onModInput(input) {
-    const ts  = input.dataset.ts;
-    const raw = input.value;
-    const tr  = input.closest("tr");
-    const flagCell = tr.querySelector("td:last-child");
+    const ts         = input.dataset.ts;
+    const raw        = input.value;
+    const tr         = input.closest("tr");
+    const isInserted = _insertions.has(ts);
+    const flagCell   = tr.querySelector("td:last-child");
 
     if (raw === "") {
         delete _modified[ts];
-        tr.classList.remove("row-modified");
-        flagCell.innerHTML = "";
+        if (isInserted) {
+            flagCell.innerHTML = "<span title='New insertion' style='color:#1b5e20;font-size:1.1em;'>&#43;</span>";
+        } else {
+            tr.classList.remove("row-modified");
+            flagCell.innerHTML = "";
+        }
     } else {
         _modified[ts] = raw;
-        tr.classList.add("row-modified");
-        flagCell.innerHTML = "<span title='Modified' style='color:#f57c00;font-size:1.1em;'>&#9998;</span>";
+        if (isInserted) {
+            flagCell.innerHTML = "<span title='New insertion' style='color:#1b5e20;font-size:1.1em;'>&#43;</span>";
+        } else {
+            tr.classList.add("row-modified");
+            flagCell.innerHTML = "<span title='Modified' style='color:#f57c00;font-size:1.1em;'>&#9998;</span>";
+        }
     }
     refreshChartMods();
     updateCommitBtn();
 }
 
 function onActionChange(select) {
-    const ts = select.dataset.ts;
-    const tr = select.closest("tr");
-    const modInput = tr.querySelector(".mod-input");
-    const flagCell = tr.querySelector("td:last-child");
+    const ts         = select.dataset.ts;
+    const tr         = select.closest("tr");
+    const isInserted = _insertions.has(ts);
+    const modInput   = tr.querySelector(".mod-input");
+    const flagCell   = tr.querySelector("td:last-child");
+
+    if (select.value === "INS") {
+        // Find the global index of this row
+        const idx = _results.findIndex(r => r.timestamp === ts);
+        if (idx === -1 || idx === _results.length - 1) {
+            toast("Cannot insert: no next point to determine the midpoint timestamp.", "orange");
+            select.value = "";
+            return;
+        }
+        const sourceRecord = _results[idx];
+        const nextRecord   = _results[idx + 1];
+
+        // Compute midpoint timestamp in milliseconds
+        const t1   = new Date(sourceRecord.timestamp).getTime();
+        const t2   = new Date(nextRecord.timestamp).getTime();
+        const midMs = Math.round((t1 + t2) / 2);
+
+        if (midMs <= t1 || midMs >= t2) {
+            toast("Cannot insert: adjacent points are too close (< 2 ms apart).", "orange");
+            select.value = "";
+            return;
+        }
+
+        const midTs = new Date(midMs).toISOString();
+
+        // Guard against timestamp collision
+        if (_results.some(r => r.timestamp === midTs)) {
+            toast("Cannot insert: computed midpoint timestamp already exists.", "orange");
+            select.value = "";
+            return;
+        }
+
+        // Create the new record
+        const newRecord = {
+            timestamp:  midTs,
+            value:      null,
+            value_type: sourceRecord.value_type
+        };
+
+        // Insert into _results directly after the source row
+        _results.splice(idx + 1, 0, newRecord);
+
+        // Pre-fill modified value with the source row's value
+        _modified[midTs] = sourceRecord.value !== null && sourceRecord.value !== undefined
+            ? String(sourceRecord.value)
+            : "";
+        _insertions.add(midTs);
+
+        // Reset the dropdown that triggered INS
+        select.value = "";
+
+        // Re-render table and chart
+        renderTable(_page);
+        renderChart();
+        updateCommitBtn();
+        return;
+    }
 
     if (select.value === "DEL") {
+        if (isInserted) {
+            // Cancel insertion: remove the row from _results and tracking sets
+            const idx = _results.findIndex(r => r.timestamp === ts);
+            if (idx !== -1) _results.splice(idx, 1);
+            delete _modified[ts];
+            _insertions.delete(ts);
+            renderTable(_page);
+            refreshChartMods();
+            updateCommitBtn();
+            return;
+        }
         _deletions.add(ts);
         tr.classList.add("row-deleted");
         tr.classList.remove("row-modified");
@@ -1180,18 +1303,23 @@ function onActionChange(select) {
         tr.classList.remove("row-deleted");
         if (modInput) modInput.disabled = false;
         const hasMod = Object.prototype.hasOwnProperty.call(_modified, ts);
-        if (hasMod) tr.classList.add("row-modified");
-        flagCell.innerHTML = hasMod
-            ? "<span title='Modified' style='color:#f57c00;font-size:1.1em;'>&#9998;</span>"
-            : "";
+        if (!isInserted && hasMod) tr.classList.add("row-modified");
+        flagCell.innerHTML = isInserted
+            ? "<span title='New insertion' style='color:#1b5e20;font-size:1.1em;'>&#43;</span>"
+            : hasMod
+                ? "<span title='Modified' style='color:#f57c00;font-size:1.1em;'>&#9998;</span>"
+                : "";
     }
     refreshChartMods();
     updateCommitBtn();
 }
 
 function clearModifications() {
-    _modified = {};
+    // Remove inserted rows from _results before clearing state
+    _results   = _results.filter(r => !_insertions.has(r.timestamp));
+    _modified  = {};
     _deletions = new Set();
+    _insertions = new Set();
     if (_results.length > 0) {
         renderTable(_page);
         refreshChartMods();
@@ -1200,11 +1328,13 @@ function clearModifications() {
 }
 
 function updateCommitBtn() {
-    const modCount = Object.keys(_modified).length;
+    const insCount = _insertions.size;
+    const modCount = Object.keys(_modified).length - insCount; // exclude insertions
     const delCount = _deletions.size;
-    const total = modCount + delCount;
+    const total    = insCount + modCount + delCount;
     document.getElementById("commitBtn").disabled = total === 0;
     const parts = [];
+    if (insCount > 0) parts.push(insCount + " insertion(s)");
     if (modCount > 0) parts.push(modCount + " modification(s)");
     if (delCount > 0) parts.push(delCount + " deletion(s)");
     document.getElementById("modCount").textContent =
@@ -1236,8 +1366,9 @@ async function doCommit() {
     btn.innerHTML = '<span class="spinner"></span>Committing…';
 
     try {
-        let updatedCount = 0;
-        let deletedCount = 0;
+        let insertedCount = 0;
+        let updatedCount  = 0;
+        let deletedCount  = 0;
 
         if (updates.length > 0) {
             const data = await apiPost("/api/update", {
@@ -1253,7 +1384,8 @@ async function doCommit() {
                 btn.innerHTML = '<i class="fa fa-check"></i>&nbsp;Commit Changes';
                 return;
             }
-            updatedCount = data.updated;
+            insertedCount = updates.filter(u => _insertions.has(u.timestamp)).length;
+            updatedCount  = data.updated - insertedCount;
         }
 
         if (deletions.length > 0) {
@@ -1274,8 +1406,9 @@ async function doCommit() {
         }
 
         const parts = [];
-        if (updatedCount > 0) parts.push(updatedCount + " record(s) updated");
-        if (deletedCount > 0) parts.push(deletedCount + " record(s) deleted");
+        if (insertedCount > 0) parts.push(insertedCount + " record(s) inserted");
+        if (updatedCount  > 0) parts.push(updatedCount  + " record(s) updated");
+        if (deletedCount  > 0) parts.push(deletedCount  + " record(s) deleted");
         toast("✓ " + parts.join(", ") + ".", "green");
         // Re-run original query so UI reflects persisted data
         await doQuery();
