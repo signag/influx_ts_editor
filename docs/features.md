@@ -12,6 +12,7 @@
 * **Auto Query** for immediate visualization update on time range change
 * **Edit** individual data points directly in a scrollable table
 * **Delete** individual data points by selecting action **DEL** in the Action column
+* **Insert** new data points in the middle between two existing points
 * **Side-by-side chart** – original values (blue) and modified/filtered values (orange) shown simultaneously for review
 * **Commit** writes the modified points back to InfluxDB 
 <br>(same measurement/tags/timestamp → overwrites the field value) while preserving the queried field value type,

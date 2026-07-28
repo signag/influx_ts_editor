@@ -132,6 +132,18 @@ For restrictions, see [Deleting Data](./features.md#deleting-data)
 
 ![Delete_Point](./img/point_delete.jpg)
 
+### Inserting Data Points
+
+You can insert a new point between two existing points by selecting action **INS** for the point after which to insert:
+
+![Insert_Point](./img/point_insert_start.jpg)
+
+**NOTE**: This option will be offered only if the time series is fully qualified, i.e.: if the filter in [Time Series Selection](#selecting-a-time-series) includes the complete tag set.
+
+The new point will be inserted half way between this and the next point with the modified value initialized with the value
+
+![Insert_Point](./img/point_insert.jpg)
+
 ### Committing changes
 
 After review of modifications, use button **Commit Changes** to commit the modified Field Values and/or deletions to the database.

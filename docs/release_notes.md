@@ -7,6 +7,7 @@
 ### New Features
 
 - Supports [deletion of data points](./usage.md#deleting-data-points)
+- Supports [insertion of new data points](./usage.md#inserting-data-points)
 
 ## V1.1.1
 
